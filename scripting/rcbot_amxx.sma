@@ -64,8 +64,6 @@
 #include "rcbot/goals.inc"
 #include "rcbot/think.inc"
 #include "rcbot/special.inc"
-// PLACEHOLDER behaviour until think/combat/look/movement are ported (minimal.inc).
-#include "rcbot/minimal.inc"
 
 // ---- AMX Mod X life cycle ----------------------------------------------------------------------
 

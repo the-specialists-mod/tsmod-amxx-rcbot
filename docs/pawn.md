@@ -27,11 +27,10 @@ scripting/rcbot/
   backend.inc                ts_bot_* forwards, making/saving/dropping bots, rejoin (host lib.rs, bots.rs)
   manager.inc                the frame loop, actions, runcmd, event fan-out (lib.rs start_frame, manager.rs)
   <subsystem>.inc            one per Rust module (section 6)
-  minimal.inc                PLACEHOLDER behaviour, deleted once think/combat/look/movement are ported
 ```
 
 Include order matters (section 3): `rcbot_amxx.sma` includes the core files first, then the
-subsystems, `minimal.inc` last. A new file is added to that list by its owner (one line, in its
+subsystems, think's files (tasks, goals, think, special) last. A new file is added to that list by its owner (one line, in its
 group) and nowhere else.
 
 ## 2. Data layout
@@ -143,7 +142,7 @@ section's owner is named in its header comment. TODO tags in stubs are `TODO(<fi
 
 | Owner (agent) | Files | Rust sources |
 |---|---|---|
-| core | `rcbot_amxx.sma`, `consts.inc`, `math.inc`, `util.inc`, `state.inc` (core section, layout), `world.inc`, `files.inc`, `report.inc`, `backend.inc`, `manager.inc`, `minimal.inc` (think deletes it), `xtask/`, docs | host `lib.rs`, `bots.rs`, `world.rs`; `bot/manager.rs`; `bot/mod.rs` (types); `math.rs` |
+| core | `rcbot_amxx.sma`, `consts.inc`, `math.inc`, `util.inc`, `state.inc` (core section, layout), `world.inc`, `files.inc`, `report.inc`, `backend.inc`, `manager.inc`, `xtask/`, docs | host `lib.rs`, `bots.rs`, `world.rs`; `bot/manager.rs`; `bot/mod.rs` (types); `math.rs` |
 | think | `think.inc`, `tasks.inc`, `goals.inc`, `special.inc`; state: think, tasks | `bot/think.rs`, `tasks.rs`, `goals.rs`, `special.rs` |
 | combat | `combat.inc`, `fire.inc`, `look.inc`, `preaim.inc`, `botweapons.inc`, `weapons.inc`, `tsweapons.inc`; state: look, preaim, combat, fire, botweapons | `bot/combat.rs`, `fire.rs`, `look.rs`, `preaim.rs`, `weapons.rs`; `weapons/` |
 | movement | `movement.inc`, `navigate.inc`, `remember.inc`, `hearing.inc`, `items.inc`, `board.inc`; state: movement, navigate, remember, hearing, items | `bot/movement.rs`, `navigate.rs`, `remember.rs`, `hearing.rs`, `items.rs`, `board.rs`; host `editor.rs`, `commands.rs` `load_waypoints` |
