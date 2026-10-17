@@ -208,6 +208,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rcbot_nav"
+version = "0.1.0"
+dependencies = [
+ "amxx",
+ "rcbot",
+ "rcbot-amxx-common",
+]
+
+[[package]]
 name = "regex"
 version = "1.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

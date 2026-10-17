@@ -1,0 +1,20 @@
+[package]
+name = "rcbot_nav"
+description = "RCBot's waypoints, visibility, A* and heatmap as an AMX Mod X module and metamod plugin (rcbot_nav)"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# xtask renames the output to AMX Mod X's file names (rcbot_nav_amxx_i386.so, rcbot_nav_amxx.dll).
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+amxx.workspace = true
+rcbot.workspace = true
+rcbot-amxx-common.workspace = true
+
+[lints.rust]
+unsafe_code = "deny"

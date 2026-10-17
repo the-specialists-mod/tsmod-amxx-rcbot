@@ -1,7 +1,7 @@
 //! Build, package and test tooling: `cargo xtask <command>`.
 //!
 //! ```text
-//! build [--release]          the modules (rcbot_megahal, rcbot_learn) for i686 Linux and Windows
+//! build [--release]          the modules (rcbot_megahal, rcbot_learn, rcbot_nav) for i686 Linux and Windows
 //! dist [--debug-info]        release build -> dist/<platform>/addons/amxmodx/{modules,scripting/include}/ (stripped
 //!                            unless --debug-info), with AMX Mod X's file names
 //! lint                       cargo fmt --check, clippy -D warnings on both targets
@@ -19,11 +19,13 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
-/// The modules: cargo package, AMX Mod X's base name.
-const MODULES: [(&str, &str); 2] = [("rcbot_megahal", "rcbot_megahal"), ("rcbot_learn", "rcbot_learn")];
+/// The modules: cargo package, AMX Mod X's base name, and whether it is also a metamod plugin
+/// (rcbot_nav: it needs the engine table for traces).
+const MODULES: [(&str, &str, bool); 3] =
+    [("rcbot_megahal", "rcbot_megahal", false), ("rcbot_learn", "rcbot_learn", false), ("rcbot_nav", "rcbot_nav", true)];
 
 /// The includes shipped in dist.
-const INCLUDES: [&str; 2] = ["rcbot_megahal.inc", "rcbot_learn.inc"];
+const INCLUDES: [&str; 3] = ["rcbot_megahal.inc", "rcbot_learn.inc", "rcbot_nav.inc"];
 
 /// A build target and the file names AMX Mod X loads.
 struct Target {
@@ -96,7 +98,7 @@ fn build(release: bool) -> Result<(), String> {
     for t in &TARGETS {
         let mut c = cargo();
         c.arg("build");
-        for (pkg, _) in MODULES {
+        for (pkg, _, _) in MODULES {
             c.args(["-p", pkg]);
         }
         c.args(["--target", t.triple]);
@@ -123,17 +125,27 @@ fn exports(t: &Target, lib: &Path) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&out.stdout).to_lowercase())
 }
 
-/// Every module exports the `AMXX_*` entry points and nothing metamod looks for (AMX Mod X treats
-/// a library exporting `Meta_Attach` as a metamod plugin); the server loads the DLLs with only
-/// system DLLs around, so they import no MinGW runtime.
-fn check_library(t: &Target, lib: &Path) -> Result<(), String> {
+/// Every module exports the `AMXX_*` entry points. The pure AMX Mod X modules export nothing
+/// metamod looks for (AMX Mod X treats a library exporting `Meta_Attach` as a metamod plugin);
+/// the metamod ones (rcbot_nav) export `Meta_Query`, `Meta_Attach`, `Meta_Detach` and an
+/// undecorated `GiveFnptrsToDll` (metamod looks up the plain stdcall name on Windows). The server
+/// loads the DLLs with only system DLLs around, so they import no MinGW runtime.
+fn check_library(t: &Target, lib: &Path, metamod: bool) -> Result<(), String> {
     let text = exports(t, lib)?;
     for need in ["amxx_query", "amxx_attach", "amxx_detach", "amxx_pluginsloaded"] {
         if !text.contains(need) {
             return Err(format!("{} doesn't export {need}", lib.display()));
         }
     }
-    if text.contains("meta_attach") || text.contains("givefnptrstodll") {
+    let meta = ["meta_query", "meta_attach", "meta_detach", "givefnptrstodll"];
+    if metamod {
+        if let Some(need) = meta.iter().find(|m| !text.contains(*m)) {
+            return Err(format!("{} doesn't export the metamod entry point {need}", lib.display()));
+        }
+        if text.contains("givefnptrstodll@") {
+            return Err(format!("{} exports a decorated GiveFnptrsToDll", lib.display()));
+        }
+    } else if meta.iter().any(|m| text.contains(m)) {
         return Err(format!("{} exports metamod entry points", lib.display()));
     }
     if t.platform.starts_with("windows") {
@@ -152,14 +164,14 @@ fn dist(debug_info: bool) -> Result<(), String> {
         let base = root().join("dist").join(t.platform).join("addons/amxmodx");
         let dir = base.join("modules");
         std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-        for (_, module) in MODULES {
+        for (_, module, metamod) in MODULES {
             let (from, to) = ((t.cargo_file)(module), (t.amxx_file)(module));
             let dest = dir.join(&to);
             std::fs::copy(built(t, true, &from), &dest).map_err(|e| format!("{from}: {e}"))?;
             if !debug_info {
                 run(Command::new(t.strip).arg(&dest))?;
             }
-            check_library(t, &dest)?;
+            check_library(t, &dest, metamod)?;
             eprintln!("  {}", dest.display());
         }
         let inc = base.join("scripting/include");
