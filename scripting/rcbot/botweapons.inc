@@ -291,15 +291,24 @@ stock botweapons_best_weapon_id(id, Float:enemy_dist, bool:enemy_too_high, bool:
 	return other != -1 ? g_bw_weapon[id][other][BW_ID] : RC_KUNGFU;
 }
 
-// bot/weapons.rs BotWeapon::is_melee: no info counts as melee.
+// bot/weapons.rs BotWeapon::is_melee: no info counts as melee. The BotWeapon accessors answer
+// as an unset weapon for an id out of range.
 stock bool:botweapons_is_melee(id, w)
 {
+	if (w < 0 || w >= RC_MAX_WEAPONS)
+	{
+		return true;
+	}
 	return !g_bw_weapon[id][w][BW_INFO] || weapons_is_melee(w);
 }
 
 // bot/weapons.rs BotWeapon::clip_is_empty.
 stock bool:botweapons_clip_is_empty(id, w)
 {
+	if (w < 0 || w >= RC_MAX_WEAPONS)
+	{
+		return false;
+	}
 	if (botweapons_is_melee(id, w) || g_bw_weapon[id][w][BW_MAX_CLIP] == 0)
 	{
 		return false;
@@ -310,6 +319,10 @@ stock bool:botweapons_clip_is_empty(id, w)
 // bot/weapons.rs BotWeapon::out_of_ammo (OutOfAmmo without m_iAmmo1, always so in TS).
 stock bool:botweapons_out_of_ammo(id, w)
 {
+	if (w < 0 || w >= RC_MAX_WEAPONS)
+	{
+		return true;
+	}
 	return g_bw_weapon[id][w][BW_CLIP] <= 0 && g_bw_weapon[id][w][BW_RESERVE] <= 0;
 }
 
@@ -317,6 +330,10 @@ stock bool:botweapons_out_of_ammo(id, w)
 // false, design §5).
 stock bool:botweapons_low_on_ammo(id, w)
 {
+	if (w < 0 || w >= RC_MAX_WEAPONS)
+	{
+		return false;
+	}
 	new max_clip = g_bw_weapon[id][w][BW_MAX_CLIP];
 	return !botweapons_is_melee(id, w) && max_clip > 0 && g_bw_weapon[id][w][BW_CLIP] * 2 < max_clip;
 }
@@ -324,6 +341,10 @@ stock bool:botweapons_low_on_ammo(id, w)
 // bot/weapons.rs BotWeapon::can_reload (TS: room in the clip and rounds in reserve; design §5).
 stock bool:botweapons_can_reload(id, w)
 {
+	if (w < 0 || w >= RC_MAX_WEAPONS)
+	{
+		return false;
+	}
 	new max_clip = g_bw_weapon[id][w][BW_MAX_CLIP];
 	return !botweapons_is_melee(id, w) && max_clip > 0 && g_bw_weapon[id][w][BW_CLIP] < max_clip && g_bw_weapon[id][w][BW_RESERVE] > 0;
 }
@@ -332,6 +353,10 @@ stock bool:botweapons_can_reload(id, w)
 // clip was seen).
 stock bool:botweapons_need_to_reload(id, w)
 {
+	if (w < 0 || w >= RC_MAX_WEAPONS)
+	{
+		return false;
+	}
 	if (botweapons_is_melee(id, w) || g_bw_weapon[id][w][BW_MAX_CLIP] == 0)
 	{
 		return false;
@@ -342,18 +367,30 @@ stock bool:botweapons_need_to_reload(id, w)
 // bot/weapons.rs BotWeapon::can_be_used_underwater (no info: yes).
 stock bool:botweapons_can_be_used_underwater(id, w)
 {
+	if (w < 0 || w >= RC_MAX_WEAPONS)
+	{
+		return true;
+	}
 	return !g_bw_weapon[id][w][BW_INFO] || weapons_can_be_used_underwater(w);
 }
 
 // bot/weapons.rs BotWeapon::priority (GetPriority; no info: 0).
 stock botweapons_priority(id, w)
 {
+	if (w < 0 || w >= RC_MAX_WEAPONS)
+	{
+		return 0;
+	}
 	return g_bw_weapon[id][w][BW_INFO] ? weapons_priority(w) : 0;
 }
 
 // bot/weapons.rs BotWeapon::can_shoot_primary (CanShootPrimary(pEdict, flFireDist, flWallDist)).
 stock bool:botweapons_can_shoot_primary(id, w, bool:underwater, Float:fire_dist)
 {
+	if (w < 0 || w >= RC_MAX_WEAPONS)
+	{
+		return true;
+	}
 	if (!g_bw_weapon[id][w][BW_INFO])
 	{
 		return true;

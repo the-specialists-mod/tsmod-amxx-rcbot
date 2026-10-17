@@ -231,9 +231,29 @@ enum
 #define DBG_NAV						(1<<7)
 #define DBG_SEE						(1<<8)
 
+// ---- movement (owner: movement; constants the earlier-included files read too) ---------------
+
+// remember.rs REMEMBER_LOST_ENEMY (BOT_REMEMBER_LOST_ENEMY) and REMEMBER_FOR.
+#define REMEMBER_LOST_ENEMY			(1<<1)
+#define REMEMBER_FOR				15.0
+// hearing.rs HEARD_FOR, LOUD_STEPS, LOUD_GUNFIRE, GUNFIRE_RANGE, SILENCED_RANGE.
+#define HEARD_FOR					8.0
+#define LOUD_STEPS					1.0
+#define LOUD_GUNFIRE				2.0
+#define GUNFIRE_RANGE				1500.0
+#define SILENCED_RANGE				350.0
+// items.rs UNTAKEABLE_FOR, SEE_ITEM_RANGE.
+#define ITEMS_UNTAKEABLE_FOR		30.0
+#define ITEMS_SEE_RANGE				1200.0
+// board.rs SIGHTING_FOR.
+#define BOARD_SIGHTING_FOR			10.0
+// movement.rs STUCK_SUICIDE.
+#define STUCK_SUICIDE				20.0
+// nav/mod.rs MAX_JUMP_HEIGHT, CONTENTS_WATER.
+#define RC_MAX_JUMP_HEIGHT			45.0
+#define RC_CONTENTS_WATER			-3
+
 // ---- combat (owner: combat; look.inc, combat.inc, fire.inc read these) ----------------------
 
-// nav/mod.rs MAX_JUMP_HEIGHT (bot_const.h).
-#define MAX_JUMP_HEIGHT				45.0
 // fire.rs AIM_RADIUS: the radius the bot treats a player as for "on target" and spread.
 #define AIM_RADIUS					14.0

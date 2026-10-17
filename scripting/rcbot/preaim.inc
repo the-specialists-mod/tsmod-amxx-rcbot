@@ -136,14 +136,7 @@ stock preaim_update(id)
 		g_pa_f[id][PA_UNTIL] = now + 0.3;
 		return;
 	}
-	// navigate_next_waypoint (mod.rs Bot::next_waypoint), here until navigate.inc's compiles when
-	// called (its ternary's tag override needs parentheses).
-	new next = cur;
-	if (g_nv_i[id][NV_PATH])
-	{
-		new RcPath:path = RcPath:g_nv_i[id][NV_PATH];
-		next = nav_path_after(path, cur);
-	}
+	new next = navigate_next_waypoint(id);
 	if (next < 0)
 	{
 		next = cur;

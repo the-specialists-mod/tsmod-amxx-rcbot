@@ -248,7 +248,7 @@ stock look_set_view_angles(id, const Float:origin[3])
 			vec_copy(angles, g_lk_v[id][LK_LADDER_ANGLES]);
 			g_lk_i[id][LK_LADDER_ANGLES_SET] = 1;
 			use_pitch = true;
-			g_lk_f[id][LK_TURN_SPEED] = MAX_JUMP_HEIGHT;
+			g_lk_f[id][LK_TURN_SPEED] = RC_MAX_JUMP_HEIGHT;
 		}
 		else if (g_lk_i[id][LK_LADDER_ANGLES_SET])
 		{
@@ -265,7 +265,7 @@ stock look_set_view_angles(id, const Float:origin[3])
 		use_pitch = look == LOOK_SEARCH_FOR_ENEMY || look == LOOK_FACE_ENEMY || look == LOOK_FACE_TASK_VECTOR || look == LOOK_FACE_TASK_EDICT
 			|| look == LOOK_SEARCH_FOR_LAST_ENEMY || look == LOOK_LOOK_AROUND;
 	}
-	if (!use_pitch && (pev(id, pev_waterlevel) > 0 || z_comp > MAX_JUMP_HEIGHT))
+	if (!use_pitch && (pev(id, pev_waterlevel) > 0 || z_comp > RC_MAX_JUMP_HEIGHT))
 	{
 		use_pitch = true;
 	}

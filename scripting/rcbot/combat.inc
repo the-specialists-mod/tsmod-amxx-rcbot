@@ -15,9 +15,7 @@
 #endif
 #define _rcbot_combat_included
 
-// remember.rs flags (remember.inc is included after this file): BOT_REMEMBER_LOST_ENEMY,
-// BOT_REMEMBER_1ST_SEE_ENEMY.
-#define CB_REMEMBER_LOST_ENEMY		(1<<1)
+// combat.rs REMEMBER_1ST_SEE_ENEMY (BOT_REMEMBER_1ST_SEE_ENEMY); REMEMBER_LOST_ENEMY is consts.inc's.
 #define CB_REMEMBER_1ST_SEE_ENEMY	(1<<3)
 // combat.rs SF_BREAK_TRIGGER_ONLY.
 #define CB_SF_BREAK_TRIGGER_ONLY	1
@@ -1010,7 +1008,7 @@ stock combat_remember_lost_enemy(id, const Float:v[3], ent)
 {
 	new Float:me[3];
 	world_origin(id, me);
-	remember_add(id, v, ent, ent ? combat_ent_serial(ent) : 0, CB_REMEMBER_LOST_ENEMY, me);
+	remember_add(id, v, ent, ent ? combat_ent_serial(ent) : 0, REMEMBER_LOST_ENEMY, me);
 }
 
 // combat.rs Bot::update_conditions (CBot::UpdateConditions). The conditions and the update time
@@ -1065,7 +1063,7 @@ stock combat_best_weapon(id, enemy, &bool:need_weapons)
 		world_entity_origin(enemy, o);
 		world_origin(id, me);
 		dist = combat_distance_from(id, o);
-		too_high = o[2] > me[2] + MAX_JUMP_HEIGHT;
+		too_high = o[2] > me[2] + RC_MAX_JUMP_HEIGHT;
 	}
 	return botweapons_best_weapon_id(id, dist, too_high, pev(id, pev_waterlevel) == 3, need_weapons);
 }
