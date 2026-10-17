@@ -44,7 +44,7 @@ Every bot thinks before any acts, so all read the same frame.
 | `client_put_in_server` / `client_disconnect` | `client_putinserver` / `client_disconnected` → `backend_put_in_server` / `backend_disconnect` |
 | `player_killed` | `ts_player_killed` → `manager_death` (`BotManager::death`) |
 | `damage` | `ts_damage` → `manager_damage` (hurt bot turns; learners) |
-| `kill_scored` | none in tsx: `learning_kill_event` builds the kill from `ts_player_killed` and the victim's last `ts_damage` (TODO(learning)) |
+| `kill_scored` | none in tsx: `learning_player_killed` builds the kill from `ts_player_killed` and the victim's last `ts_damage` |
 | `sound` | `ts_sound` → `manager_sound` |
 | `entity_touch` | `ts_bot_touch` → `manager_touch` |
 | `weapon_fired` | `ts_weapon_fired` → `manager_weapon_fired` |
@@ -479,7 +479,7 @@ to the front drops the last task instead (the Rust queue is unbounded).
 | learning.rs Bot::choose_loadout (the bandit's pick, rl_loadout_choose) | `learning.inc` `learning_choose_loadout` | ported |
 | manager.rs combat_event for a damage (update_heatmap, update_opponents, Bot::combat_event, blow_weapon) | `learning.inc` `learning_damage_event` | partial: no inflictor, so blow_weapon's non-grenade projectile (-1) counts as the attacker's weapon |
 | manager.rs combat_event for a kill (KillEvent) | `learning.inc` `learning_kill_event` | ported |
-| the port's kill_scored from ts_player_killed and the victim's last ts_damage | `learning.inc` `learning_player_killed` | ported (needs core to call it) |
+| the port's kill_scored from ts_player_killed and the victim's last ts_damage | `learning.inc` `learning_player_killed` | ported |
 | manager.rs refresh_player_keys (PlayerKeys::refresh, rl_opp_set_key on changes) | `learning.inc` `learning_refresh_player_keys`, `learning_player_key` | ported |
 | manager.rs player_stunt (rl_opp_stunt; tsfun's client_stunt). | `learning.inc` `learning_player_stunt` | ported |
 | learning.rs Bot::learned_threat (rl_opp_threat). | `learning.inc` `learning_learned_threat` | ported |
