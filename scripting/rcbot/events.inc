@@ -91,7 +91,7 @@ static events_attack(id, k)
 // BotEvent::Leaving: it says goodbye.
 stock events_leaving(id)
 {
-	chat_bot_chat(id, RcChat_LeaveGame, -1, true);
+	chat_bot_chat(id, RcChat_LeaveGame, 0, true);
 }
 
 // BotEvent::HearTeammateDie: without an enemy, the bot turns to the victim.
@@ -110,12 +110,12 @@ stock events_kill_self(id)
 	{
 		if (rep_average_on_server(id) >= BOT_MID_REP)
 		{
-			chat_bot_chat(id, RcChat_Laugh, -1, false);
+			chat_bot_chat(id, RcChat_Laugh, 0, false);
 			events_having_fun(id);
 		}
 		else
 		{
-			chat_bot_chat(id, RcChat_Killed, -1, false);
+			chat_bot_chat(id, RcChat_Killed, 0, false);
 			events_getting_bored(id);
 		}
 	}
@@ -258,7 +258,8 @@ stock events_died(id, killer)
 	}
 	if (random_num(0, 100) < g_cfg_i[CFG_CHAT_PERCENT])
 	{
-		chat_bot_chat(id, RcChat_Killed, killer, false);
+		// The world (0) is someone talked to that isn't a client: -1 for chat_bot_chat.
+		chat_bot_chat(id, RcChat_Killed, killer == 0 ? -1 : killer, false);
 	}
 	if (rep_client_id(killer) == NO_CLIENT)
 	{

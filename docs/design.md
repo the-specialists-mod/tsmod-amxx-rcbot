@@ -490,129 +490,176 @@ to the front drops the last task instead (the Rust queue is unbounded).
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| manager.rs apply_squad_orders | `squad.inc` `squad_apply_orders` | stub |
-| Squads::update_angles | `squad.inc` `squad_update_angles` | stub |
-| host bots.rs flush_squad_messages (ClientPrint HUD_PRINTTALK to leaders). | `squad.inc` `squad_flush_messages` | stub |
-| Squads::clear (map change). | `squad.inc` `squad_clear` | stub |
-| host bots.rs disconnect | `squad.inc` `squad_player_left` | stub |
-| Bot::squad_think. | `squad.inc` `squad_think` | stub |
-| Bot::can_add_to_squad. | `squad.inc` `squad_can_add` | stub |
-| Bot::add_to_squad. | `squad.inc` `squad_add` | stub |
-| Bot::remove_my_squad. | `squad.inc` `squad_remove_mine` | stub |
-| Bot::squad_modes. | `squad.inc` `squad_modes` | stub |
-| Bot::follow_formation | `squad.inc` `squad_follow_formation` | stub |
-| Bot::update_squad_conditions. | `squad.inc` `squad_update_conditions` | stub |
-| Bot::squad_enemy_found. | `squad.inc` `squad_enemy_found` | stub |
-| Bot::see_leader_again. | `squad.inc` `squad_see_leader_again` | stub |
-| Bot::task_follow_leader. | `squad.inc` `squad_task_follow_leader` | stub |
-| host bots.rs remove_all_bot_squads (BotMenu_Func_Squad_RemoveAllBotSquads) | `squad.inc` `squad_remove_all_bot_squads` | stub |
+| squad.rs Squads::clear (FreeMemory) | `squad.inc` `squad_clear` | ported |
+| Squads::get | `squad.inc` `squad_get` | ported |
+| Squads::find_by_leader (FindSquadByLeader) | `squad.inc` `squad_find_by_leader` | ported |
+| Squads::add_member (AddSquadMember) | `squad.inc` `squad_add_member` | ported (at most 16 squads of 8 members; the rest dropped with a debug line) |
+| Squads::remove (RemoveSquad) | `squad.inc` `squad_remove` | ported |
+| Squads::change_leader + Squad::change_leader | `squad.inc` `squad_change_leader_of` | ported |
+| Squads::return_all_to_formation | `squad.inc` `squad_return_all_to_formation` | ported |
+| Squads::update_angles | `squad.inc` `squad_update_angles` | ported |
+| manager.rs apply_squad_orders + Bot::squad_order | `squad.inc` `squad_apply_orders` | ported |
+| host bots.rs flush_squad_messages | `squad.inc` `squad_flush_messages` | ported |
+| host bots.rs disconnect's change_leader | `squad.inc` `squad_player_left` | ported |
+| Squad::change_formation / spread / change_spread | `squad.inc` `squad_change_formation`, `squad_spread`, `squad_change_spread` | ported |
+| Squad::toggle_fire_mode (Effect::SquadToggleFireMode) | `squad.inc` `squad_toggle_fire_mode` | ported |
+| Squad::set_combat_type (Effect::SquadToggleCombatType) | `squad.inc` `squad_toggle_combat_type` | ported |
+| Squad::formation_position / formation_vector | `squad.inc` `squad_formation_vector` | ported (upstream's blocked-trace quirk kept) |
+| Squad::is_stealth / can_shoot of the bot's squad | `squad.inc` `squad_is_stealth`, `squad_can_shoot` | ported |
+| Bot::clear_squad / set_squad / is_squad_leader | `squad.inc` `squad_clear_bot`, `squad_set_squad`, `squad_is_leader` | ported |
+| Bot::can_add_to_squad / add_to_squad / remove_my_squad | `squad.inc` `squad_can_add`, `squad_add`, `squad_remove_mine` | ported |
+| host bots.rs remove_all_bot_squads | `squad.inc` `squad_remove_all_bot_squads` | ported |
+| Bot::squad_think | `squad.inc` `squad_think` | ported |
+| Bot::update_squad_conditions | `squad.inc` `squad_update_conditions` | ported |
+| Bot::follow_formation (+ squad_leader_think) | `squad.inc` `squad_follow_formation` | ported |
+| Bot::squad_modes | `squad.inc` `squad_modes` | ported (holding fire never works, as upstream) |
+| Bot::squad_enemy_found | `squad.inc` `squad_enemy_found` | ported |
+| Bot::see_leader_again | `squad.inc` `squad_see_leader_again` | ported |
+| Bot::task_follow_leader (+ say_in_position) | `squad.inc` `squad_task_follow_leader` | ported |
 
 ### botcam.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| host bots.rs botcam_frame (StartFrame's m_BotCam.Think / Spawn). | `botcam.inc` `botcam_frame` | stub |
-| manager.rs frame | `botcam.inc` `botcam_set_other_has_enemy` | stub |
-| BotCam::clear (ServerActivate / Deactivate). | `botcam.inc` `botcam_clear` | stub |
-| host bots.rs botcam_tune_in (TuneIn) | `botcam.inc` `botcam_tune_in` | stub |
+| BotCam::clear | `botcam.inc` `botcam_clear` | ported |
+| BotCam::is_working | `botcam.inc` `botcam_is_working` | ported |
+| BotCam::set_current_bot | `botcam.inc` `botcam_set_current_bot` | ported |
+| combat.rs enemy_found's camera part (BotHasEnemy) | `botcam.inc` `botcam_enemy_found` | ported (combat calls it) |
+| manager.rs frame's other_has_enemy | `botcam.inc` `botcam_set_other_has_enemy` | ported |
+| host bots.rs botcam_frame + spawn_camera, BotCam::think / move_camera | `botcam.inc` `botcam_frame` | ported (the camera is made only if `clients_precache` ran in plugin_precache) |
+| host bots.rs botcam_tune_in (TuneIn, tune_in_error) | `botcam.inc` `botcam_tune_in` | ported |
 
 ### events.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
 | events.rs Bot::forget_greeting | `events.inc` `events_forget_greeting` | ported |
-| BotEvent::Leaving (it says goodbye). | `events.inc` `events_leaving` | stub |
-| BotEvent::KillSelf. | `events.inc` `events_kill_self` | stub |
-| BotEvent::Kill (event_kill). | `events.inc` `events_kill` | stub |
-| BotEvent::Died (event_died) | `events.inc` `events_died` | stub |
-| BotEvent::SeeTeammateDie. | `events.inc` `events_see_teammate_die` | stub |
-| BotEvent::SeePlayerDie. | `events.inc` `events_see_player_die` | stub |
-| BotEvent::SeeTeammateKill (does nothing upstream). | `events.inc` `events_see_teammate_kill` | stub |
-| BotEvent::SeeEnemyKill. | `events.inc` `events_see_enemy_kill` | stub |
-| BotEvent::HearTeammateDie. | `events.inc` `events_hear_teammate_die` | stub |
-| Bot::want_to_leave_game. | `events.inc` `events_want_to_leave_game` | stub |
-| Bot::having_fun. | `events.inc` `events_having_fun` | stub |
-| Bot::getting_bored. | `events.inc` `events_getting_bored` | stub |
-| Bot::task_type_message (BOT_TASK_TYPE_MESSAGE | `events.inc` `events_task_type_message` | stub |
+| Bot::team_number | `events.inc` `events_team_number` | ported |
+| Bot::having_fun / getting_bored / boredom_text | `events.inc` `events_having_fun`, `events_getting_bored`, `events_boredom_text` | ported |
+| Bot::want_to_leave_game | `events.inc` `events_want_to_leave_game` | ported |
+| BotEvent::Leaving | `events.inc` `events_leaving` | ported |
+| BotEvent::KillSelf | `events.inc` `events_kill_self` | ported |
+| BotEvent::Kill (event_kill) | `events.inc` `events_kill` | ported |
+| BotEvent::Died (event_died) | `events.inc` `events_died` | ported |
+| BotEvent::SeeTeammateDie (see_teammate_die) | `events.inc` `events_see_teammate_die` | ported (a world killer: nothing) |
+| BotEvent::SeePlayerDie (see_player_die) | `events.inc` `events_see_player_die` | ported |
+| BotEvent::SeeTeammateKill | `events.inc` `events_see_teammate_kill` | ported (does nothing) |
+| BotEvent::SeeEnemyKill (see_enemy_kill) | `events.inc` `events_see_enemy_kill` | ported |
+| BotEvent::HearTeammateDie | `events.inc` `events_hear_teammate_die` | ported |
+| Bot::task_type_message (BOT_TASK_TYPE_MESSAGE) | `events.inc` `events_task_type_message` | ported |
 
 ### chat.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| globals.cpp SetupBotChat | `chat.inc` `chat_init` | stub |
-| host bots.rs wake_hal | `chat.inc` `chat_wake_hal` | stub |
-| host bots.rs save_bot | `chat.inc` `chat_save_hal` | stub |
-| free the brain (hal_free) when the bot leaves. | `chat.inc` `chat_free_hal` | stub |
-| host bots.rs greet (BotFunc_AddBot's greeting), if CFG_CHATTING. | `chat.inc` `chat_greet` | stub |
-| events.rs Bot::bot_chat (chat_pick into a TYPE_MESSAGE task, or say now). | `chat.inc` `chat_bot_chat` | stub |
-| events.rs Bot::reply_to_message (hal_bot_reply on the shared buffer). | `chat.inc` `chat_reply_to_message` | stub |
-| host bots.rs say_command (say / say_team | `chat.inc` `chat_say_command` | stub |
+| globals.cpp SetupBotChat | `chat.inc` `chat_init` | ported |
+| host bots.rs wake_hal | `chat.inc` `chat_wake_hal` | ported (`hal_load` with the profile's hal_*_file overrides) |
+| host bots.rs save_bot's brain | `chat.inc` `chat_save_hal` | ported |
+| the brain freed with the bot | `chat.inc` `chat_free_hal` | ported |
+| host bots.rs greet | `chat.inc` `chat_greet` | ported |
+| events.rs Bot::bot_chat (+ chat_players) | `chat.inc` `chat_bot_chat` | ported (to: player, 0 nobody, -1 a non-client) |
+| events.rs Bot::reply_to_message | `chat.inc` `chat_reply_to_message` | ported |
+| host bots.rs say_command | `chat.inc` `chat_say_command` | ported |
 
 ### config.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
 | config/mod.rs Config::default | `config.inc` `config_defaults` | ported |
-| Config::is_on (IsConfigSettingOn). | `config.inc` `config_is_on` | ported |
+| Config::is_on (IsConfigSettingOn) | `config.inc` `config_is_on` | ported |
 | Config::change_setting (ChangeConfigSetting) | `config.inc` `config_change_setting` | ported |
-| Config::is_debug_on (IsDebugLevelOn). | `config.inc` `config_is_debug_on` | ported |
-| config/file.rs read_config + commands.rs run_config | `config.inc` `config_read` | stub |
-| host lib.rs map_config_frame | `config.inc` `config_map_config_frame` | stub |
-| host lib.rs server_activate's map config read (into a line queue). | `config.inc` `config_read_map_config` | stub |
+| Config::is_debug_on (IsDebugLevelOn) | `config.inc` `config_is_debug_on` | ported |
+| cstr.rs fgets_chunks + text_mode (the line readers) | `config.inc` `cfg_open`, `cfg_fgets`, `cfg_close`, `cfg_strip_line`, `cfg_is_space` | ported |
+| host bots.rs State::write (atomic writes) | `config.inc` `cfg_write_begin`, `cfg_write_end`, `cfg_write_text`, `cfg_make_dirs` | ported (Windows: the old file is deleted before the rename) |
+| file.rs read_config + host commands.rs read_config | `config.inc` `config_read`, `config_tokenize` | ported (at most 64 command lines) |
+| host lib.rs server_activate's map config read | `config.inc` `config_read_map_config` | ported (at most 128 lines of 191 bytes) |
+| host lib.rs map_config_frame | `config.inc` `config_map_config_frame` | ported |
+| file.rs read_bot_folder (rcbot_folder.ini) | none | not ported: the folder is `tsmod/rcbot/` |
 
 ### commands.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| lib.rs TSRS_PluginLoad's register_command(BOT_COMMAND_ACCESS) | `commands.inc` `commands_init` | ported |
-| commands.rs server_command. | `commands.inc` `commands_server_rcbot` | ported |
-| commands.rs client_command (with the users' access levels, bot_users.ini). access checks (users.inc), menus... | `commands.inc` `commands_client_rcbot` | partial |
-| commands.rs ts_team_choice | `commands.inc` `commands_ts_team_choice` | stub |
-| host bots.rs force_grip_frame (CClient::Think's force grip), every frame. | `commands.inc` `commands_force_grip_frame` | stub |
-| host bots.rs disconnect | `commands.inc` `commands_force_grip_release_player` | stub |
+| lib.rs register_command(BOT_COMMAND_ACCESS) | `commands.inc` `commands_init` | ported (`rcbot` server and client commands, `menuselect`, `+/-rcbot_force_grip`) |
+| commands.rs server_command | `commands.inc` `commands_server_rcbot` | ported |
+| commands.rs client_command | `commands.inc` `commands_client_rcbot`, `commands_client_menuselect`, `commands_client_force_grip` | ported (the dead "addbot" tip left out) |
+| commands.rs run_config | `commands.inc` `commands_run_config_line` | ported |
+| commands.rs run (Run::action) | `commands.inc` `commands_run` | ported (pending access rechecks run right after; the host never runs them) |
+| CommandId lookup / needs_access / help, command_list | `commands.inc` `commands_lookup`, `commands_needs_access`, `commands_help`, `commands_print_list` | ported |
+| Host::print | `commands.inc` `commands_print`, `commands_print_all` | ported |
+| Run::add_bot + Host::add_bot | `commands.inc` `commands_add_bot` | ported |
+| commands.rs ts_team_choice | `commands.inc` `commands_ts_team_choice` | ported |
+| Run::menu_select / menu_action (BotMenu_Func_*) | `commands.inc` `commands_menu_select`, `commands_menu_action` | ported |
+| Run::set_pass / waypoint_menu / util / users / debug_ent / debug_bot / debug / config / squad / path_waypoint / auto_waypoint / botcam / help_command / waypoint / waypoint_flag | `commands.inc` (one static each) | ported; `util givetsweapon` is tsfun's `ts_giveweapon` (200 extra rounds), `util explo`'s damage is the engine's `fakedamage` |
+| Host::find_player / player_by_user_id / facing_entity / nearest_waypoint / toggles, view_trace, explosion_create, radius_damage | `commands.inc` statics, `commands_find_player`, `commands_nearest_waypoint` | ported |
+| lib.rs map_config_frame's rejoin hold | `commands.inc` `commands_hold_rejoin` | ported |
+| host bots.rs force_grip_frame | `commands.inc` `commands_force_grip_frame` | ported |
+| host bots.rs disconnect's grips / release_force_grip | `commands.inc` `commands_force_grip_release_player` | ported |
 
 ### menu.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| Menu::show | `menu.inc` `menu_show` | stub |
-| menu.rs activate | `menu.inc` `menu_select` | stub |
+| Menu::get | `menu.inc` `menu_caption`, `menu_item` | ported (TS's menus) |
+| Menu::render | `menu.inc` `menu_render` | ported |
+| Menu::show + host api.rs show_menu (ShowMenu message) | `menu.inc` `menu_show` | ported |
+| menu.rs activate | `menu.inc` `menu_select` | ported (actions run `commands_menu_action`) |
 
 ### profile.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
 | BotProfile::init (BotFunc_InitProfile) | `profile.inc` `profile_init` | ported |
-| host bots.rs profile_for | `profile.inc` `profile_for` | ported |
+| host bots.rs profile_for + choose_profile | `profile.inc` `profile_for` | ported |
 | A bot in the game (other than slot except) uses profile pid. | `profile.inc` `profile_in_use` | ported |
-| parse_profile_list | `profile.inc` `profile_parse_list` | partial |
-| BotProfile::read over botprofiles/<pid>.ini | `profile.inc` `profile_read` | partial |
+| parse_profile_list | `profile.inc` `profile_parse_list` | ported |
+| BotProfile::read | `profile.inc` `profile_read` | ported (favmap, spray and the NS percentages read but not kept) |
+| BotProfile::write | none | not ported (nothing calls it) |
 
 ### rep.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| host bots.rs new_bot | `rep.inc` `rep_load_all` | stub |
-| host bots.rs put_in_server | `rep.inc` `rep_add_load` | stub |
-| host bots.rs disconnect | `rep.inc` `rep_remove_save` | stub |
-| Reputations::client_rep | `rep.inc` `rep_of` | stub |
-| Reputations::increase_rep. | `rep.inc` `rep_increase` | stub |
-| Reputations::decrease_rep. | `rep.inc` `rep_decrease` | stub |
-| Reputations::average_rep_on_server. | `rep.inc` `rep_average_on_server` | stub |
+| events.rs Bot::client_rep_id (State::rep_ids) | `rep.inc` `rep_client_id` | ported |
+| Reputations::get / add_rep | `rep.inc` `rep_find`, `rep_add_rep` | ported (at most 64 reputations a bot) |
+| Reputations::client_rep | `rep.inc` `rep_client_rep` | ported |
+| events.rs Bot::client_rep | `rep.inc` `rep_of` | ported |
+| events.rs Bot::rep_of | `rep.inc` `rep_lookup` | ported |
+| events.rs increase_rep_of / decrease_rep_of (Reputations::increase_rep / decrease_rep) | `rep.inc` `rep_increase`, `rep_decrease` | ported |
+| Reputations::average_rep_on_server | `rep.inc` `rep_average_on_server` | ported |
+| Reputations::random_client | `rep.inc` `rep_random_client` | ported |
+| Reputation::describe, Reputations::print_reps | `rep.inc` `rep_describe`, `rep_print_reps` | ported |
+| decrease_rep_roll / increase_rep_roll | `rep.inc` `rep_decrease_roll`, `rep_increase_roll` | ported |
+| parse_rep_file, write_rep, add_load_rep, remove_save_rep (.rcr) | `rep.inc` statics | ported (byte-compatible records, atomic rewrite) |
+| host bots.rs new_bot's reputations | `rep.inc` `rep_load_all` | ported |
+| host bots.rs put_in_server's reputations | `rep.inc` `rep_add_load` | ported |
+| host bots.rs disconnect's reputations | `rep.inc` `rep_remove_save` | ported |
+| Reputations::save_all_rep, new_rep, get_create_rep | none | not ported (nothing calls them) |
 
 ### users.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| users.rs AllowedPlayers::read_users over bot_users.ini. Called from plugin_cfg. | `users.inc` `users_read` | stub |
-| users.rs AllowedPlayers::get_player's access level for a client, 0 none. | `users.inc` `users_access` | stub |
+| AllowedPlayers::clear | `users.inc` `users_clear` | ported |
+| AllowedPlayers::add_player / remove_player (AllowedPlayer::matches) | `users.inc` `users_add_player`, `users_remove_player` | ported (at most 64 users) |
+| AllowedPlayers::get_player (AllowedPlayer::is_for_client) | `users.inc` `users_get_player`, `users_access` | ported |
+| AllowedPlayers::show_users | `users.inc` `users_show` | ported |
+| AllowedPlayers::read_users | `users.inc` `users_read_file` | ported |
+| host commands.rs read_users | `users.inc` `users_read` | ported |
 
 ### client.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| Clients::connect (CClients::ClientConnected) | `client.inc` `clients_connect` | stub |
-| Clients::disconnect. | `client.inc` `clients_disconnect` | stub |
+| host lib.rs precache (camera model, fireball) | `client.inc` `clients_precache` | ported (needs a plugin_precache call) |
+| Clients::connect + host bots.rs put_in_server | `client.inc` `clients_connect` | ported (the Steam ID is the auth id, as upstream; the host passes "") |
+| Clients::recheck_auth | `client.inc` `clients_recheck_auth` | ported |
+| Clients::disconnect | `client.inc` `clients_disconnect` | ported |
+| Client::set_pass / has_cmd / toggle_cmd / set_auto_waypoint / has_tooltip_sent | `client.inc` `clients_set_pass`, `clients_has_cmd`, `clients_toggle_cmd`, `clients_set_auto_waypoint`, `clients_has_tooltip_sent` | ported |
+| Client::current_waypoint (the editor's and the menu's) | `client.inc` `clients_current_waypoint` | ported |
+| the client's editor switches to navigate.inc | `client.inc` `clients_editor_sync` | ported |
+| rep.rs player_rep_id (bot_playerids.ini) | `client.inc` `clients_player_rep_id` | ported (atomic rewrite on append) |
+| Engine::beam (util explo's beam) | `client.inc` `clients_beam` | ported |
 
 ### manager.inc
 

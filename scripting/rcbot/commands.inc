@@ -1446,7 +1446,7 @@ static commands_explosion(player, Float:magnitude, bool:damage)
 	vec_mad(tr_end, fwd, -4.0, center);
 	if (g_fireball_sprite)
 	{
-		message_begin(MSG_PAS, SVC_TEMPENTITY, center);
+		message_begin_f(MSG_PAS, SVC_TEMPENTITY, center);
 		write_byte(TE_EXPLOSION);
 		write_coord_f(center[0]);
 		write_coord_f(center[1]);
@@ -1862,7 +1862,7 @@ static commands_config(me)
 		}
 		else if (equal(g_ca[0], "max_path_revs") || equal(g_ca[0], "max_update_vision_revs"))
 		{
-			new bool:path = equal(g_ca[0], "max_path_revs");
+			new bool:path = equal(g_ca[0], "max_path_revs") != 0;
 			if (setting)
 			{
 				new revs = str_to_num(g_ca[1]);
@@ -2165,8 +2165,8 @@ static commands_waypoint(client, me)
 	}
 	if (equal(g_ca[0], "on") || equal(g_ca[0], "off"))
 	{
-		new bool:on = equal(g_ca[0], "on");
-		g_cl_i[client][CL_WAYPOINT_ON] = on;
+		new bool:on = equal(g_ca[0], "on") != 0;
+		g_cl_i[client][CL_WAYPOINT_ON] = _:on;
 		clients_editor_sync(client);
 		commands_print(me, on ? "Waypoints are now being shown" : "Waypoints are not being shown");
 	}

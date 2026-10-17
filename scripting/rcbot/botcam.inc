@@ -22,7 +22,7 @@ new g_cam_entity;				// m_pCameraEdict, 0 none
 new g_cam_current_bot;			// 0 none
 new g_cam_state;				// CAM_*
 new bool:g_cam_tried_to_spawn;	// m_bTriedToSpawn
-stock bool:g_cam_other_has_enemy;
+new bool:g_cam_other_has_enemy;
 new Float:g_cam_next_change_bot_time;
 new Float:g_cam_next_change_state;
 new g_cam_position_set;
@@ -66,6 +66,16 @@ stock botcam_set_other_has_enemy(id)
 {
 	new c = g_cam_current_bot;
 	g_cam_other_has_enemy = c != 0 && c != id && is_rcbot(c) && g_cb_i[c][CB_ENEMY] != 0;
+}
+
+// combat.rs Bot::enemy_found's camera part (BotHasEnemy): unless the camera's bot has an enemy
+// (this bot, or the other one, BotCam::other_has_enemy), the camera turns to this bot.
+stock botcam_enemy_found(id)
+{
+	if (g_cam_current_bot != id && !g_cam_other_has_enemy)
+	{
+		botcam_set_current_bot(id);
+	}
 }
 
 // host bots.rs spawn_camera (CBotCam::Spawn): an invisible info_target with the mechgibs model,

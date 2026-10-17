@@ -47,6 +47,10 @@ enum
 // lib.rs precache: m_iWaypointTexture (util explo's beam) and m_sModelIndexFireball.
 new g_beam_sprite;
 new g_fireball_sprite;
+// State::rep_ids: each player's reputation id by index, NO_CLIENT without a CClient (a mirror of
+// g_cl_i[CL_REP_ID] for the files included before state.inc's readers; rep_lookup is the API).
+stock g_client_rep_id[RC_SLOTS] = {NO_CLIENT, ...};
+
 // models/mechgibs.mdl precached (the bot camera may set it).
 new bool:g_botcam_model_ok;
 
@@ -112,6 +116,7 @@ stock clients_connect(player)
 	g_cl_i[player][CL_USED] = 1;
 	get_user_authid(player, g_cl_steam[player], charsmax(g_cl_steam[]));
 	g_cl_i[player][CL_REP_ID] = rep_id;
+	g_client_rep_id[player] = rep_id;
 	new k = users_get_player(player, name);
 	if (k != -1)
 	{
@@ -166,6 +171,7 @@ stock clients_disconnect(player)
 	}
 	// navigate_editor_player_left (rcbot_amxx.sma) drops the editor's side.
 	clients_init_slot(player);
+	g_client_rep_id[player] = NO_CLIENT;
 }
 
 // Client::set_pass (SetPass): cut to 15 bytes; asks for an access recheck.

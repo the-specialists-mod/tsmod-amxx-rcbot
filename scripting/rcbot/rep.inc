@@ -90,8 +90,9 @@ stock rep_of(id, player)
 	return rep_client_rep(id, rep_client_id(player));
 }
 
-// events.rs Bot::rep_of: the bot's reputation of player if it has one (false: none).
-stock bool:rep_get(id, player, &rep)
+// events.rs Bot::rep_of (m_Profile.m_Rep.GetRep(id)): the bot's reputation of player if it has
+// one (false: no CClient, or no reputation for its id).
+stock bool:rep_lookup(id, player, &rep)
 {
 	new rid = rep_client_id(player);
 	if (rid == NO_CLIENT)
