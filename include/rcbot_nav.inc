@@ -72,6 +72,13 @@
  */
 native nav_seed(seed);
 
+/**
+ * A monotonic clock in microseconds (since the module's first call), wrapping in 32 bits: the
+ * difference of two readings is right for intervals under 35 minutes. For timing a plugin's
+ * frame (rcbot_amxx's rcbot_profile); AMX Mod X's own clocks are seconds or the frame's game time.
+ */
+native nav_clock_us();
+
 // ---- the map's waypoints ----
 
 /**

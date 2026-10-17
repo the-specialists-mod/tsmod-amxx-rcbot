@@ -86,6 +86,7 @@ RCBot's (rules team - 1, -1 none). Flags are `NAV_FL_*` (`W_FL_*`).
 | Native | What |
 |---|---|
 | `nav_seed(seed)` | seed the module's random numbers |
+| `nav_clock_us()` | a monotonic microsecond clock (wraps in 32 bits), for profiling |
 | `bool:nav_load(const map[] = "")`, `bool:nav_save()`, `nav_count()`, `nav_clear()`, `nav_map(out[], len)` | `WaypointLoad` / `WaypointSave` (`""`: the current map, from the port); missing `.rcv` rows are traced a few per frame |
 | `bool:nav_valid(wp)`, `bool:nav_origin(wp, Float:o[3])`, `nav_flags(wp)`, `Float:nav_distance(wp, const Float:from[3])` | a waypoint |
 | `nav_nearest(origin, range, ignore, NAV_NEAREST_* flags, failed[], num)` | `CWaypointLocations::NearestWaypoint` (location buckets) |

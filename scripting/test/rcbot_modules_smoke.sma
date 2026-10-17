@@ -175,9 +175,11 @@ smoke_nav()
 	new Float:origin[3] = {0.0, 0.0, 0.0}, Float:there[3] = {200.0, 0.0, 0.0}, Float:got[3], Float:end[3];
 	new Float:weights[4], ignore[1] = {-1};
 	nav_seed(1);
+	new t0 = nav_clock_us();
 	new bool:loaded = nav_load();
 	nav_map(map, charsmax(map));
-	server_print("[rcbot_smoke] nav %s loaded %d count %d pending %d", map, loaded, nav_count(), nav_vis_pending());
+	server_print("[rcbot_smoke] nav %s loaded %d count %d pending %d in %d us", map, loaded, nav_count(), nav_vis_pending(),
+		nav_clock_us() - t0);
 	nav_vis_budget(nav_vis_budget(1024));
 	nav_heatmap_load();
 

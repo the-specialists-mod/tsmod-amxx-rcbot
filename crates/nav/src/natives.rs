@@ -98,6 +98,15 @@ pub fn nav_seed(a: &mut dyn Args) -> Cell {
     1
 }
 
+/// `nav_clock_us()`: a monotonic clock in microseconds since the module's first call, wrapping
+/// in 32 bits (the difference of two readings is right for intervals under 35 minutes). For
+/// profiling a plugin's frame: AMX Mod X's own clocks (`get_systime`, `tickcount`) are seconds or
+/// a frame's game time.
+pub fn nav_clock_us(_: &mut dyn Args) -> Cell {
+    static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+    START.get_or_init(std::time::Instant::now).elapsed().as_micros() as u32 as Cell
+}
+
 // ---- the map's waypoints ----
 
 /// The current map's name, from the port's plugin API.

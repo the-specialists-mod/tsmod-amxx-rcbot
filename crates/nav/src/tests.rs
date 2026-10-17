@@ -132,6 +132,15 @@ fn install(d: &std::path::Path, map: &str, mut w: Waypoints, world: &dyn World) 
 }
 
 #[test]
+fn the_clock_counts_microseconds_forward() {
+    let mut a = FakeArgs::new(&[]);
+    let t0 = n::nav_clock_us(&mut a);
+    std::thread::sleep(std::time::Duration::from_millis(5));
+    let d = n::nav_clock_us(&mut a).wrapping_sub(t0);
+    assert!((5_000..1_000_000).contains(&d), "{d} us for a 5 ms sleep");
+}
+
+#[test]
 fn files_round_trip_byte_for_byte() {
     let (d, world) = setup("roundtrip", FakeWorld { walls: vec![150.0], ..FakeWorld::default() });
     let mut w = grid();

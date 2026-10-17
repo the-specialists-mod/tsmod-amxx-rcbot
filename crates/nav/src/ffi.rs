@@ -12,6 +12,7 @@ use amxx::sys::{DLL_FUNCTIONS, enginefuncs_t};
 amxx::natives! {
     pub static NATIVES = [
         c"nav_seed" => n::nav_seed,
+        c"nav_clock_us" => n::nav_clock_us,
         c"nav_load" => n::nav_load,
         c"nav_save" => n::nav_save,
         c"nav_count" => n::nav_count,
