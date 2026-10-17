@@ -128,6 +128,7 @@ stock navigate_load_map()
 	if (loaded)
 	{
 		rc_log(TSLOG_INFO, "loaded %d waypoints for %s (%d visibility rows to trace)", nav_count(), map, nav_vis_pending());
+		report_waypoints_loaded(map, nav_count());
 	}
 	else
 	{
@@ -756,6 +757,10 @@ stock NavPathStatus:navigate_search_path(id, from, to, bool:resume)
 	if (st == NAV_PATH_FOUND && from >= 0)
 	{
 		nav_path_push(p, from, true);
+	}
+	if (st == NAV_PATH_FOUND)
+	{
+		report_path_found(id, from, to);
 	}
 	return st;
 }

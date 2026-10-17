@@ -1779,6 +1779,7 @@ static stock think_task_normal_attack(id, &bool:done, &bool:failed)
 		if (weap == RC_KUNGFU)
 		{
 			// The port's kung fu fighter (design §4).
+			report_kungfu(id);
 			kungfu_fight(id, enemy, dist);
 		}
 		else if (melee)

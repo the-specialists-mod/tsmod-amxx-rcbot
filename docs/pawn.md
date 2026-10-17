@@ -23,7 +23,7 @@ scripting/rcbot/
   util.inc                   rc_log, rc_debug, is_rcbot
   world.inc                  the frame's snapshots and caches, traces, PVS, contents (host world.rs)
   files.inc                  tsmod/rcbot/ paths, the map name
-  report.inc                 e2e CHECK lines, status lines
+  report.inc                 e2e CHECK lines, status lines, the frame profiler (rcbot_profile)
   backend.inc                ts_bot_* forwards, making/saving/dropping bots, rejoin (host lib.rs, bots.rs)
   manager.inc                the frame loop, actions, runcmd, event fan-out (lib.rs start_frame, manager.rs)
   <subsystem>.inc            one per Rust module (section 6)
@@ -160,8 +160,16 @@ writes them from that module (then say so in a comment).
   tsmod-amxx-rs's includes (`TSMOD_AMXX_INCLUDE`, default `~/dev/hl/tsmod-amxx-rs/include`) and
   AMX Mod X's; any warning fails.
 * `cargo xtask e2e [linux] [win]` (xtask/src/e2e.rs): the plugin and the five modules on the
-  amxx-testenv roots, `ts_bot_backend rcbot_amxx`, `ts_bot_quota 0`, two `addbot` and two
-  `rcbot addbot`, then `report.inc`'s checks (`backend`, `add_quota`, `add_rcbot`, `spawned`,
-  `runcmd`, `moved`, `fired`) in `logs/rcbot_amxx_e2e.log`, and no runtime errors. The roots are
+  amxx-testenv roots, `ts_bot_backend rcbot_amxx`, `ts_bot_quota 0`, four test profiles with
+  chat on, two `addbot` and two `rcbot addbot` on ts_dojo, then `report.inc`'s phase 1 checks
+  (`backend`, `add_quota`, `add_rcbot`, `spawned`, `runcmd`, `moved`, `fired`,
+  `waypoints_loaded`, `path_found`, `waypoints`, `weapon_switch`, `turned`, `kill`, `chat`,
+  `hal`), the `rcbot` command over rcon, `changelevel ts_lobby` and the phase 2 checks
+  (`waypoints_loaded`, `backend`, `rejoined`, `runcmd`, `moved`, `kungfu`) in
+  `logs/rcbot_amxx_e2e.log`, the data files saved during the run, and no runtime errors. Soft
+  checks (`hal`, `kungfu`: the bots must meet) log `SKIP` instead of failing. The roots are
   shared: run it only when nothing else uses them. Add a check for your subsystem in
   `report.inc` (core reviews) when its behaviour can be seen from the log.
+* `rcbot_profile <seconds>` times `ts_frame` (report.inc, with rcbot_nav's `nav_clock_us`) and logs
+  the average and worst frame and its parts to `logs/rcbot_amxx_profile.log`; `cargo xtask perf`
+  runs it with 4, 16 and 31 bots.

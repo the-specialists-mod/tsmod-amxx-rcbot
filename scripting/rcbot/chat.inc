@@ -203,6 +203,7 @@ stock chat_reply_to_message(id, message[], sender, bool:sender_is_bot, bool:team
 	{
 		copy(g_ev_chat_string[id], charsmax(g_ev_chat_string[]), reply);
 		tasks_add_priority(id, TASK_TYPE_MESSAGE, 0, sender, world_userid(sender), team_only ? 1 : 0, 0.0, VEC_ZERO);
+		report_hal(id, reply);
 	}
 }
 
@@ -219,13 +220,7 @@ stock chat_say_command(player, bool:team_only)
 	new arg1[RC_SAY_LEN], arg2[RC_SAY_LEN];
 	read_argv(1, arg1, charsmax(arg1));
 	read_argv(2, arg2, charsmax(arg2));
-	if (team_only && equal(arg1, "form", 4) && (equal(arg1[4], " up", 3) || equal(arg2, "up", 2)))
-	{
-		manager_make_squad(player);
-		squad_flush_messages();
-		return PLUGIN_CONTINUE;
-	}
-	if (is_rcbot(player) && !config_is_on(CFG_CHAT_REPLY_TO_BOTS))
+	if (chat_said(player, arg1, arg2, team_only))
 	{
 		return PLUGIN_CONTINUE;
 	}
@@ -253,4 +248,73 @@ stock chat_say_command(player, bool:team_only)
 	}
 	manager_say(player, message, team_only);
 	return PLUGIN_CONTINUE;
+}
+
+// say_command's start: say_team "form up" makes a squad; a bot's line gets replies only with
+// chat_reply_to_bots. True when the message stops here.
+static bool:chat_said(player, const arg1[], const arg2[], bool:team_only)
+{
+	if (team_only && equal(arg1, "form", 4) && (equal(arg1[4], " up", 3) || equal(arg2, "up", 2)))
+	{
+		manager_make_squad(player);
+		squad_flush_messages();
+		return true;
+	}
+	return is_rcbot(player) && !config_is_on(CFG_CHAT_REPLY_TO_BOTS);
+}
+
+// A bot's own say / say_team (its Action::Command, run through ts_bot_command): the port runs
+// the command without AMX Mod X's client command hook, so on_say never sees it; the host gets
+// it through the plugin API's player_say (queued, lib.rs player_say) and so the bots answer
+// each other with chat_reply_to_bots. line is the whole command (`say "text"`); its argument
+// is the message, as the engine tokenises it (one quoted argument, or the first word).
+stock chat_bot_say_command(id, const line[])
+{
+	new bool:team_only;
+	new at;
+	if (equal(line, "say_team ", 9))
+	{
+		team_only = true;
+		at = 9;
+	}
+	else if (equal(line, "say ", 4))
+	{
+		at = 4;
+	}
+	else
+	{
+		return;
+	}
+	// The arguments as say_command reads them: the first two, and the last non-empty one.
+	new arg1[RC_SAY_LEN], arg2[RC_SAY_LEN], message[RC_SAY_LEN], tmp[RC_SAY_LEN];
+	new pos = at, n = 0;
+	while ((pos = argparse(line, pos, tmp, charsmax(tmp))) != -1)
+	{
+		n++;
+		if (n == 1)
+		{
+			copy(arg1, charsmax(arg1), tmp);
+		}
+		else if (n == 2)
+		{
+			copy(arg2, charsmax(arg2), tmp);
+		}
+		if (tmp[0])
+		{
+			copy(message, charsmax(message), tmp);
+		}
+	}
+	report_chat(id, arg1);
+	if (chat_said(id, arg1, arg2, team_only))
+	{
+		return;
+	}
+	if (!arg2[0])
+	{
+		copy(message, charsmax(message), arg1);
+	}
+	if (message[0])
+	{
+		manager_say(id, message, team_only);
+	}
 }

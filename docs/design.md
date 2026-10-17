@@ -51,6 +51,7 @@ Every bot thinks before any acts, so all read the same frame.
 | `item_pickup` | `ts_item_pickup` → `manager_item_pickup` |
 | `player_stunt` | tsfun's `client_stunt` → `learning_player_stunt` |
 | `client_command` say / say_team | `say` / `say_team` client commands → `chat_say_command` |
+| `player_say` for a bot's own say (from `bot_command`, queued) | `manager_run_action` queues a bot's `say`/`say_team` line, `chat_bot_say_command` after every bot acted (the port runs bots' commands without AMX Mod X's client command hook) |
 | `add_bot` / `activate` / `deactivate` / `adopt_bot` | `ts_bot_add` / `ts_bot_activate` / `ts_bot_deactivate` / `ts_bot_adopt` |
 | `server_deactivate` / `shutdown` | `plugin_end` (`backend_save_all`, heatmap, squads, camera) |
 
@@ -560,6 +561,7 @@ to the front drops the last task instead (the Rust queue is unbounded).
 | events.rs Bot::bot_chat (+ chat_players) | `chat.inc` `chat_bot_chat` | ported (to: player, 0 nobody, -1 a non-client) |
 | events.rs Bot::reply_to_message | `chat.inc` `chat_reply_to_message` | ported |
 | host bots.rs say_command | `chat.inc` `chat_say_command` | ported |
+| host lib.rs player_say (bots' own lines) | `chat.inc` `chat_bot_say_command` (queued in `manager.inc`) | ported |
 
 ### config.inc
 

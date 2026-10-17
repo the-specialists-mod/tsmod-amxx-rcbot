@@ -79,6 +79,7 @@ public ts_bot_adopt(id)
 	get_user_name(id, g_bot_name[id], charsmax(g_bot_name[]));
 	backend_new_bot(id, RC_ADDED_ADOPT);
 	rc_log(TSLOG_INFO, "adopted ^"%s^" (#%d)", g_bot_name[id], id);
+	report_bot_added(id, RC_ADDED_ADOPT);
 }
 
 // ---- making bots ---------------------------------------------------------------------------------

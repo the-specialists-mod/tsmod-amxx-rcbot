@@ -3,18 +3,28 @@
 //!
 //! 1. `dist` (our three modules, release) and `pawn` (rcbot_amxx.amxx); tsx and tsfun from
 //!    tsmod-amxx-rs's `dist/` (its `cargo xtask dist` runs first when they are missing).
-//! 2. Per root: refuse if its server runs; back up `configs/modules.ini`, `configs/plugins.ini` and
-//!    `ts/server.cfg`; install the modules and the plugin; enable tsx, tsfun, rcbot_megahal,
-//!    rcbot_learn, rcbot_nav and `rcbot_amxx.amxx debug`, comment out other `*_e2e` plugins (one
-//!    sets `ts_bot_backend` to itself); append `ts_bot_backend rcbot_amxx` and `localinfo rcbot_e2e
-//!    1` to server.cfg (read at map start, before plugin_init: the backend takes over at once).
+//! 2. Per root: refuse if its server runs; back up `configs/modules.ini`, `configs/plugins.ini`,
+//!    `ts/server.cfg` and the RCBot files of [`fixtures`]; install the modules and the plugin;
+//!    enable tsx, tsfun, rcbot_megahal, rcbot_learn, rcbot_nav and `rcbot_amxx.amxx debug`,
+//!    comment out other `*_e2e` plugins (one sets `ts_bot_backend` to itself); append
+//!    `ts_bot_backend rcbot_amxx` and `localinfo rcbot_e2e 1` to server.cfg (read at map start,
+//!    before plugin_init: the backend takes over at once); write the fixtures into
+//!    `ts/tsmod/rcbot/` (four profiles with a MegaHAL training text, bot_chat.ini, bot_config.ini
+//!    turning chat on, MAP2's map config with `ts_kungfu` and `min_bots 4`) and remove the four
+//!    profiles' brains (so they are made and pretrained afresh).
 //! 3. `run.sh <os> --map ts_dojo --bots 0` (ts_bot_quota 0), wait for the plugin's `CHECK backend
 //!    PASS`, then over rcon `addbot` twice (the port's quota path, ts_bot_add) and `rcbot addbot`
-//!    twice (ts_bot_create), and wait for `DONE` in `logs/rcbot_amxx_e2e.log`.
-//! 4. `quit` over rcon (ServerDeactivate saves), `stop.sh` if it hangs; restore the three files.
-//! 5. Failures: every `CHECK ... FAIL` line, no `DONE`, `amxx plugins` not listing the plugin as
-//!    running, and AMX Mod X runtime errors (`error_*.log` written during the run, lines naming
-//!    rcbot_amxx or our modules).
+//!    twice (ts_bot_create), and wait for `DONE map=ts_dojo` in `logs/rcbot_amxx_e2e.log` (phase 1:
+//!    report.inc's checks, waypoints to a kill and a MegaHAL reply).
+//! 4. The `rcbot` server command over rcon ([`RCON_CHECKS`]), then `changelevel ts_lobby`: the
+//!    plugin saves, reloads, and its phase 2 checks (the bots back, kung fu) end with `DONE
+//!    map=ts_lobby`. `stats` (the server's fps) is printed.
+//! 5. `quit` over rcon (ServerDeactivate saves), `stop.sh` if it hangs; the data files of
+//!    [`saved_files`] must have been written during the run; restore the backed up files.
+//! 6. Failures: every `CHECK ... FAIL` line, a missing `DONE` or one with failures, an rcon answer
+//!    or a saved file missing, `amxx plugins` not listing the plugin as running, and AMX Mod X
+//!    runtime errors (`error_*.log` written during the run, lines naming rcbot_amxx or our
+//!    modules).
 //!
 //! Environment: `AMXX_TESTENV` (default `~/dev/hl/ref/amxx-testenv`), `AMXX_LINUX_ROOT` /
 //! `AMXX_WIN_ROOT` (default `~/games/amxx_rehlds_{linux,win}`), `TSMOD_AMXX_DIR` (default
@@ -32,6 +42,10 @@ const PLUGIN: &str = "rcbot_amxx";
 const LOG: &str = "rcbot_amxx_e2e.log";
 /// What the plugin registers as (register_plugin's title) for `amxx plugins`.
 const PLUGIN_TITLE: &str = "RCBot AMXX";
+/// The first map and the one `changelevel` goes to: both have shipped waypoints
+/// (dist/<platform>/tsmod/rcbot/waypoints/ts/) and are in the testenv's maps.
+const MAP1: &str = "ts_dojo";
+const MAP2: &str = "ts_lobby";
 /// The lines appended to server.cfg (after a newline: server.cfg may end without one).
 const SERVER_CFG_LINES: &str = "\n// tsmod-amxx-rcbot e2e\nts_bot_backend rcbot_amxx\nlocalinfo rcbot_e2e 1\n";
 
@@ -137,7 +151,122 @@ fn tsmod_amxx_modules(t: &Target) -> Result<Vec<PathBuf>, String> {
     }
 }
 
-/// The three files the run changes, restored afterwards whatever happens.
+/// RCBot's files the run puts in `ts/tsmod/rcbot/` (backed up and restored with the configs): four
+/// profiles, so the bots have MegaHAL brains to save (`botprofiles/<id>_hal.brn`); chat lines;
+/// bot_config.ini turning chatting and replies (to bots too) on; and MAP2's map config turning
+/// `ts_kungfu` on (the bots fight with kung fu there), which also runs the map config path.
+fn fixtures() -> Vec<(String, String)> {
+    let mut f = vec![("bot_profiles.ini".to_owned(), "1\n2\n3\n4\n".to_owned())];
+    for (id, name, skill) in [(1, "Neo", 80), (2, "Trinity", 70), (3, "Morpheus", 90), (4, "Switch", 60)] {
+        f.push((
+            format!("botprofiles/{id}.ini"),
+            format!("# tsmod-amxx-rcbot e2e\nname=\"{name}\"\nskill={skill}\nhal_pretrain_file=\"e2e_hal.trn\"\n"),
+        ));
+    }
+    // The brains' training text (read when a brain is new: the run starts without the four
+    // brains, see `install`), so MegaHAL has words to reply with.
+    f.push((
+        "botprofiles/e2e_hal.trn".to_owned(),
+        [
+            "the specialists is a game about kung fu and guns",
+            "i like the dojo map because the fights are close",
+            "nice shot you got me with the shotgun",
+            "the bots run along the waypoints and shoot at each other",
+            "who wants to fight me with kung fu in the dojo",
+            "",
+        ]
+        .join("\n"),
+    ));
+    f.push((
+        "bot_chat.ini".to_owned(),
+        [
+            "# tsmod-amxx-rcbot e2e",
+            "[greetings-friendly]",
+            "hi %n",
+            "[greetings-neutral]",
+            "hello %n, welcome to %m",
+            "[greetings-unfriendly]",
+            "oh, it's %n",
+            "[kills-friendly]",
+            "sorry %n",
+            "[kills-neutral]",
+            "got you %n",
+            "[kills-unfriendly]",
+            "take that %n",
+            "[killed-friendly]",
+            "nice shot %n",
+            "[killed-neutral]",
+            "you got lucky %n",
+            "[killed-unfriendly]",
+            "i will get you %n",
+            "[idle]",
+            "anyone seen %r",
+            "",
+        ]
+        .join("\n"),
+    ));
+    f.push((
+        "bot_config.ini".to_owned(),
+        "config chatting 1\nconfig chat_reply_to_bots 1\nconfig chat_percent 100\nconfig chat_reply_percent 100\n".to_owned(),
+    ));
+    // ReHLDS drops fake clients at a level change: RCBot's min_bots (the rejoin code) brings
+    // four back, one every 5 s.
+    f.push((format!("map_configs/ts/{MAP2}.cfg"), "rcbot config ts_kungfu 1\nrcbot config min_bots 4\n".to_owned()));
+    // Not fixtures but backed up and removed before the run: the four brains, so they are made
+    // and pretrained afresh (empty contents mean "remove" in `install`).
+    for id in 1..=4 {
+        f.push((format!("botprofiles/{id}_hal.brn"), String::new()));
+    }
+    f
+}
+
+/// Whether a data file (relative to `tsmod/rcbot/`) is one of a kind.
+type FileMatch = fn(&str) -> bool;
+
+/// The data files the bots must have saved during the run (newer than its start): the MegaHAL
+/// brains, the learned data, the weapon stats and both maps' heatmaps (bots.rs save_bot,
+/// save_globals; plugin_end at the level change and at quit).
+fn saved_files() -> Vec<(String, FileMatch)> {
+    vec![
+        ("botprofiles/<id>_hal.brn".into(), |n: &str| n.starts_with("botprofiles/") && n.ends_with("_hal.brn")),
+        ("botprofiles/<key>.rld".into(), |n: &str| n.starts_with("botprofiles/") && n.ends_with(".rld")),
+        ("botprofiles/<key>.rkf".into(), |n: &str| n.starts_with("botprofiles/") && n.ends_with(".rkf")),
+        ("team<n>.rld".into(), |n: &str| n.starts_with("team") && n.ends_with(".rld")),
+        ("weaponstats.rwr".into(), |n: &str| n == "weaponstats.rwr"),
+        (format!("waypoints/ts/{MAP1}.rhm"), |n: &str| n == "waypoints/ts/ts_dojo.rhm"),
+        (format!("waypoints/ts/{MAP2}.rhm"), |n: &str| n == "waypoints/ts/ts_lobby.rhm"),
+    ]
+}
+
+/// The files under `dir` (relative, `/`-separated) modified at or after `since`.
+fn fresh_files(dir: &Path, since: SystemTime) -> Vec<String> {
+    fn walk(base: &Path, dir: &Path, since: SystemTime, out: &mut Vec<String>) {
+        let Ok(rd) = std::fs::read_dir(dir) else { return };
+        for e in rd.flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                walk(base, &p, since, out);
+            } else if e.metadata().and_then(|m| m.modified()).is_ok_and(|m| m >= since) {
+                out.push(p.strip_prefix(base).unwrap_or(&p).to_string_lossy().replace('\\', "/"));
+            }
+        }
+    }
+    let mut out = Vec::new();
+    walk(dir, dir, since, &mut out);
+    out.sort();
+    out
+}
+
+/// The rcon commands and what their answer must contain: the `rcbot` server command (help, and
+/// bot_config.ini's settings read back).
+const RCON_CHECKS: [(&str, &str); 3] = [
+    ("rcbot help config", "[RCBOT] config command help"),
+    ("rcbot config chatting", "\"chatting\" is currently \"1\""),
+    ("rcbot config chat_reply_percent", "100"),
+];
+
+/// The files the run changes (the configs, RCBot's fixtures), restored afterwards whatever happens;
+/// a directory the run made for a file that wasn't there goes again if it is empty.
 struct Backup {
     files: Vec<(PathBuf, Option<Vec<u8>>)>,
 }
@@ -152,8 +281,16 @@ impl Drop for Backup {
     fn drop(&mut self) {
         for (p, bytes) in &self.files {
             let _ = std::fs::remove_file(p);
-            if let Some(b) = bytes {
-                let _ = std::fs::write(p, b);
+            match bytes {
+                Some(b) => {
+                    let _ = std::fs::write(p, b);
+                }
+                None => {
+                    let mut dir = p.parent();
+                    while let Some(d) = dir.filter(|d| std::fs::remove_dir(d).is_ok()) {
+                        dir = d.parent();
+                    }
+                }
             }
         }
     }
@@ -208,6 +345,18 @@ fn install(r: &Root, tsmod: &[PathBuf]) -> Result<(), String> {
     replace(&plugins, plugins_ini(&read(&plugins)).as_bytes())?;
     let cfg = r.dir.join("ts/server.cfg");
     replace(&cfg, format!("{}{SERVER_CFG_LINES}", read(&cfg)).as_bytes())?;
+    let data = r.dir.join("ts/tsmod/rcbot");
+    for (rel, text) in fixtures() {
+        let p = data.join(&rel);
+        if let Some(d) = p.parent() {
+            std::fs::create_dir_all(d).map_err(|e| format!("{}: {e}", d.display()))?;
+        }
+        if text.is_empty() {
+            let _ = std::fs::remove_file(&p);
+        } else {
+            replace(&p, text.as_bytes())?;
+        }
+    }
     let _ = std::fs::remove_file(amxx.join(format!("logs/{LOG}")));
     Ok(())
 }
@@ -221,11 +370,13 @@ fn e2e_root(r: &Root, testenv: &Path, tsmod: &[PathBuf]) -> Result<Vec<String>, 
     if !amxx.join("configs/modules.ini").exists() {
         return Err(format!("{} has no AMX Mod X: run amxx-testenv/setup.sh {}", r.dir.display(), r.os));
     }
-    let _backup = Backup::take(&[amxx.join("configs/modules.ini"), amxx.join("configs/plugins.ini"), r.dir.join("ts/server.cfg")]);
+    let mut backed = vec![amxx.join("configs/modules.ini"), amxx.join("configs/plugins.ini"), r.dir.join("ts/server.cfg")];
+    backed.extend(fixtures().into_iter().map(|(rel, _)| r.dir.join("ts/tsmod/rcbot").join(rel)));
+    let _backup = Backup::take(&backed);
     install(r, tsmod)?;
     let log = amxx.join(format!("logs/{LOG}"));
     let started = SystemTime::now();
-    run(Command::new(testenv.join("run.sh")).args([r.os, "--map", "ts_dojo", "--bots", "0"]))?;
+    run(Command::new(testenv.join("run.sh")).args([r.os, "--map", MAP1, "--bots", "0"]))?;
     let mut fails = Vec::new();
     if !wait_for(&log, Duration::from_secs(90), |t| t.contains("CHECK backend PASS")) {
         fails.push(format!("{}: the backend wasn't activated within 90 s (plugin loaded? see {})", r.os, log.display()));
@@ -241,7 +392,21 @@ fn e2e_root(r: &Root, testenv: &Path, tsmod: &[PathBuf]) -> Result<Vec<String>, 
         std::thread::sleep(Duration::from_secs(1));
     }
     let timeout = Duration::from_secs(std::env::var("E2E_TIMEOUT").ok().and_then(|v| v.parse().ok()).unwrap_or(300));
-    let done = wait_for(&log, timeout, |t| t.contains("DONE"));
+    let done1 = wait_for(&log, timeout, |t| t.contains(&format!("DONE map={MAP1}")));
+    for (cmd, want) in RCON_CHECKS {
+        let got = rcon(testenv, r.port, cmd);
+        if got.contains(want) {
+            println!("  rcon {cmd:?}: PASS ({})", got.lines().find(|l| l.contains(want)).unwrap_or("").trim());
+        } else {
+            fails.push(format!("{}: rcon {cmd:?} doesn't answer {want:?}: {:?}", r.os, got.trim()));
+        }
+    }
+    // The level change: the plugin saves (plugin_end), reloads on MAP2 and adopts the bots the
+    // engine kept; its phase 2 checks end with DONE map=MAP2.
+    rcon(testenv, r.port, &format!("changelevel {MAP2}"));
+    let done2 = wait_for(&log, timeout, |t| t.contains(&format!("DONE map={MAP2}")));
+    let stats = rcon(testenv, r.port, "stats");
+    println!("  stats: {}", stats.lines().last().unwrap_or("").trim());
     quit(r, testenv);
 
     let text = read(&log);
@@ -250,12 +415,21 @@ fn e2e_root(r: &Root, testenv: &Path, tsmod: &[PathBuf]) -> Result<Vec<String>, 
         // log_to_file lines: `L <date> - <time>: <message>`
         let msg = l.split_once(": ").map_or(l, |(_, m)| m);
         println!("  {msg}");
-        if msg.starts_with("CHECK ") && msg.contains(" FAIL") {
+        if msg.starts_with("CHECK ") && msg.contains(" FAIL") || msg.starts_with("DONE ") && !msg.contains(" fail=0") {
             fails.push(format!("{}: {msg}", r.os));
         }
     }
-    if !done {
-        fails.push(format!("{}: no DONE in {} within {timeout:?}", r.os, log.display()));
+    for (map, done) in [(MAP1, done1), (MAP2, done2)] {
+        if !done {
+            fails.push(format!("{}: no DONE map={map} in {} within {timeout:?}", r.os, log.display()));
+        }
+    }
+    let fresh = fresh_files(&r.dir.join("ts/tsmod/rcbot"), started);
+    for (what, matches) in saved_files() {
+        match fresh.iter().find(|n| matches(n)) {
+            Some(n) => println!("  saved {what}: PASS ({n})"),
+            None => fails.push(format!("{}: no {what} saved during the run (fresh: {})", r.os, fresh.join(" "))),
+        }
     }
     // AMX Mod X runtime errors of this run that name the plugin or our modules.
     let ours = |l: &str| l.contains(PLUGIN) || l.contains("rcbot_megahal") || l.contains("rcbot_learn") || l.contains("rcbot_nav");

@@ -129,10 +129,13 @@ before AMX Mod X's.
 `cargo xtask e2e [linux] [win]` (`xtask/src/e2e.rs`) runs rcbot_amxx on the amxx-testenv roots
 (`~/games/amxx_rehlds_{linux,win}`, built by `../ref/amxx-testenv/setup.sh`): dist, the plugin,
 tsx/tsfun from `../tsmod-amxx-rs/dist` (its `cargo xtask dist` when missing), ts_dojo with
-`ts_bot_backend rcbot_amxx` and `ts_bot_quota 0`, 2 `addbot` + 2 `rcbot addbot`, then the
-plugin's `CHECK` lines (`logs/rcbot_amxx_e2e.log`) and the error logs; it restores the configs it
-changed. The `~/games` roots are shared: never start servers there outside an e2e run (and run
-e2e only when nothing else uses them), and stop them with the testenv's `stop.sh`.
+`ts_bot_backend rcbot_amxx` and `ts_bot_quota 0`, four test profiles with chat on, 2 `addbot` +
+2 `rcbot addbot`, the plugin's phase 1 `CHECK` lines (`logs/rcbot_amxx_e2e.log`: waypoints, A*,
+weapon switch, turning, a kill, chat and a MegaHAL reply, ...), the `rcbot` command over rcon,
+`changelevel ts_lobby` and the phase 2 checks (bots back, kung fu), the data files saved during
+the run, and the error logs; it restores the configs and files it changed. The `~/games` roots
+are shared: never start servers there outside an e2e run (and run e2e only when nothing else uses
+them), and stop them with the testenv's `stop.sh`.
 
 Before calling a change done: `cargo fmt`, `cargo xtask test`, `cargo xtask lint`, and
 `cargo xtask dist` when exports or the build change.

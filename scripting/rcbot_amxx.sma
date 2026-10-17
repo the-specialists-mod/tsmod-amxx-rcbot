@@ -149,6 +149,7 @@ public ts_player_killed(victim, attacker, inflictor)
 	#pragma unused inflictor
 	manager_death(attacker, victim);
 	learning_player_killed(victim, attacker);
+	report_kill(victim, attacker);
 }
 
 public ts_player_spawned(id)

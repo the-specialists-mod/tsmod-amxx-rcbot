@@ -18,25 +18,44 @@
 
 // ---- the frame (lib.rs start_frame) -------------------------------------------------------------
 
+// The bots' own say lines of this frame (manager_run_action), for chat_bot_say_command.
+new g_said_by[RC_SLOTS];
+new g_said_text[RC_SLOTS][RC_ACTION_TEXT];
+new g_said_count;
+
 // ts_frame: StartFrame for the bots.
 stock manager_frame()
 {
 	// The frame's players and rules, once for every bot and forward (world.rs refresh_frame);
 	// m_iTeamScores and the masters (read once a map) come with it.
+	report_profile_begin();
 	world_refresh_frame();
+	report_profile_mark(0);
 	navigate_editor_frame();
 	commands_force_grip_frame();
 	config_map_config_frame();
 	if (!g_active)
 	{
+		report_profile_end();
 		return;
 	}
 	backend_rejoin_frame();
 	manager_think_all();
+	report_profile_mark(1);
 	squad_flush_messages();
 	botcam_frame();
 	manager_act_all();
+	for (new k = 0; k < g_said_count; k++)
+	{
+		if (is_rcbot(g_said_by[k]))
+		{
+			chat_bot_say_command(g_said_by[k], g_said_text[k]);
+		}
+	}
+	g_said_count = 0;
+	report_profile_mark(2);
 	report_frame();
+	report_profile_end();
 }
 
 // BotManager::frame: each bot in index order may leave (BOTS_LEAVE_AND_JOIN: it says goodbye
@@ -176,6 +195,13 @@ stock manager_run_action(id, k)
 		case ACT_COMMAND:
 		{
 			ts_bot_command(id, g_act_text[id][k]);
+			// A say goes to the bots after every bot acted (lib.rs player_say's queue).
+			if (g_act_text[id][k][0] == 's' && equal(g_act_text[id][k], "say", 3) && g_said_count < sizeof(g_said_by))
+			{
+				g_said_by[g_said_count] = id;
+				copy(g_said_text[g_said_count], charsmax(g_said_text[]), g_act_text[id][k]);
+				g_said_count++;
+			}
 		}
 		case ACT_SELECT_WEAPON:
 		{
