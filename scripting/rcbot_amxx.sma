@@ -43,10 +43,6 @@
 #include "rcbot/client.inc"
 #include "rcbot/menu.inc"
 #include "rcbot/commands.inc"
-#include "rcbot/tasks.inc"
-#include "rcbot/think.inc"
-#include "rcbot/goals.inc"
-#include "rcbot/special.inc"
 #include "rcbot/look.inc"
 #include "rcbot/preaim.inc"
 #include "rcbot/combat.inc"
@@ -63,6 +59,11 @@
 #include "rcbot/botcam.inc"
 #include "rcbot/events.inc"
 #include "rcbot/chat.inc"
+// think last: it reads every subsystem's tables (board.inc's, the remembered and heard lists).
+#include "rcbot/tasks.inc"
+#include "rcbot/goals.inc"
+#include "rcbot/think.inc"
+#include "rcbot/special.inc"
 // PLACEHOLDER behaviour until think/combat/look/movement are ported (minimal.inc).
 #include "rcbot/minimal.inc"
 
