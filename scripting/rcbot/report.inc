@@ -154,6 +154,16 @@ stock report_check_pass(check, const detail[])
 	}
 }
 
+// A data file the Pawn bot reads itself (.rkf, .rcr) and what came of it (e2e only: the file
+// compatibility run, xtask compat, looks for these lines).
+stock report_file(const path[], const what[])
+{
+	if (g_e2e)
+	{
+		log_to_file(RC_E2E_LOG, "file %s %s", path, what);
+	}
+}
+
 // ts_bot_activate came.
 stock report_backend_active()
 {

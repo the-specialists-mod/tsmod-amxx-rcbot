@@ -393,6 +393,18 @@ static rep_add_load_rep(id, rep_id)
 stock rep_load_all(id)
 {
 	g_rep_count[id] = 0;
+	if (g_e2e && g_pr_i[id][PR_ID] != 0)
+	{
+		new rel[64], what[32];
+		rep_file_rel(g_pr_i[id][PR_ID], rel, charsmax(rel));
+		new n = rep_file_records(rel);
+		if (n >= 0)
+		{
+			formatex(what, charsmax(what), "loaded: %d records", n);
+		}
+		copy(what, charsmax(what), n == -1 ? "missing" : (n == -2 ? "not parsed: the size isn't records" : what));
+		report_file(rel, what);
+	}
 	for (new p = 1; p <= MAX_PLAYERS; p++)
 	{
 		if (g_cl_i[p][CL_USED])

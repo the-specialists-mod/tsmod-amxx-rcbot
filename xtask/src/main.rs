@@ -10,6 +10,10 @@
 //!                            (tsbot.inc, tsconst.inc, tsfun.inc) and AMX Mod X's (into target/pawn/)
 //! e2e [linux] [win]          dist, the Pawn plugins, tsx/tsfun from tsmod-amxx-rs, then rcbot_amxx on the
 //!                            amxx-testenv roots (ts_dojo, 4 bots) and its CHECK lines (default: linux); e2e.rs
+//! compat [linux] [win]       rcbot_amxx, then the standalone tsmod_rcbot, then rcbot_amxx again on one root's
+//!                            shared tsmod/rcbot/: each loads what the other wrote; compat.rs
+//! perf [linux] [win]         rcbot_amxx without `debug`, 4/16/31 bots: ts_frame's cost (rcbot_profile) and the
+//!                            server's fps; perf.rs
 //! ```
 //!
 //! Environment: `FWGS_DIR` (FWGS headers, default: `xash3d-fwgs` next to the checkout or one of its
@@ -20,7 +24,9 @@
 //! include directory with tsbot.inc, default `~/dev/hl/tsmod-amxx-rs/include`; CI unpacks its v0.3.0
 //! release there). e2e's own variables are in e2e.rs.
 
+mod compat;
 mod e2e;
+mod perf;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -334,7 +340,9 @@ fn main() -> ExitCode {
         Some("test") => test(),
         Some("pawn") => pawn(true).map(|_| ()),
         Some("e2e") => e2e::e2e(&args[1..]),
-        _ => Err("usage: cargo xtask <build [--release] | dist [--debug-info] | lint | test | pawn | e2e [linux] [win]>".into()),
+        Some("compat") => compat::compat(&args[1..]),
+        Some("perf") => perf::perf(&args[1..]),
+        _ => Err("usage: cargo xtask <build [--release] | dist [--debug-info] | lint | test | pawn | e2e [linux] [win] | compat [linux] [win] | perf [linux] [win]>".into()),
     };
     match r {
         Ok(()) => ExitCode::SUCCESS,

@@ -1430,6 +1430,20 @@ stock kungfu_load(id)
 	{
 		kf_arms_in(id, arms);
 		g_kf_combo_count[id] = count;
+		if (g_e2e)
+		{
+			new what[48], used = 0;
+			for (new k = 0; k < count; k++)
+			{
+				used += g_kf_combo_uses[id][k] > 0 ? 1 : 0;
+			}
+			formatex(what, charsmax(what), "loaded: %d combos, %d used", count, used);
+			report_file(path, what);
+		}
+	}
+	else
+	{
+		report_file(path, "not parsed: the defaults kept");
 	}
 }
 

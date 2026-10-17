@@ -38,26 +38,26 @@ use std::process::Command;
 use std::time::{Duration, Instant, SystemTime};
 
 /// The plugin under test and its log (report.inc).
-const PLUGIN: &str = "rcbot_amxx";
-const LOG: &str = "rcbot_amxx_e2e.log";
+pub(super) const PLUGIN: &str = "rcbot_amxx";
+pub(super) const LOG: &str = "rcbot_amxx_e2e.log";
 /// What the plugin registers as (register_plugin's title) for `amxx plugins`.
 const PLUGIN_TITLE: &str = "RCBot AMXX";
 /// The first map and the one `changelevel` goes to: both have shipped waypoints
 /// (dist/<platform>/tsmod/rcbot/waypoints/ts/) and are in the testenv's maps.
-const MAP1: &str = "ts_dojo";
-const MAP2: &str = "ts_lobby";
+pub(super) const MAP1: &str = "ts_dojo";
+pub(super) const MAP2: &str = "ts_lobby";
 /// The lines appended to server.cfg (after a newline: server.cfg may end without one).
 const SERVER_CFG_LINES: &str = "\n// tsmod-amxx-rcbot e2e\nts_bot_backend rcbot_amxx\nlocalinfo rcbot_e2e 1\n";
 
-struct Root {
-    os: &'static str,
-    dir: PathBuf,
-    port: u16,
-    target: &'static Target,
-    exe: &'static str,
+pub(super) struct Root {
+    pub(super) os: &'static str,
+    pub(super) dir: PathBuf,
+    pub(super) port: u16,
+    pub(super) target: &'static Target,
+    pub(super) exe: &'static str,
 }
 
-fn roots(names: &[String]) -> Result<Vec<Root>, String> {
+pub(super) fn roots(names: &[String]) -> Result<Vec<Root>, String> {
     let names: Vec<&str> = if names.is_empty() { vec!["linux"] } else { names.iter().map(String::as_str).collect() };
     names
         .into_iter()
@@ -82,7 +82,7 @@ fn roots(names: &[String]) -> Result<Vec<Root>, String> {
 }
 
 /// A server of this root is running (the testenv's stop.sh check: name and cwd).
-fn running(r: &Root) -> bool {
+pub(super) fn running(r: &Root) -> bool {
     let Ok(out) = Command::new("pgrep").args(["-x", r.exe]).output() else { return false };
     String::from_utf8_lossy(&out.stdout)
         .lines()
@@ -90,7 +90,7 @@ fn running(r: &Root) -> bool {
         .any(|cwd| cwd == r.dir)
 }
 
-fn rcon(testenv: &Path, port: u16, cmd: &str) -> String {
+pub(super) fn rcon(testenv: &Path, port: u16, cmd: &str) -> String {
     Command::new("python3")
         .arg("-I")
         .arg(testenv.join("rcon.py"))
@@ -100,22 +100,22 @@ fn rcon(testenv: &Path, port: u16, cmd: &str) -> String {
         .unwrap_or_default()
 }
 
-fn read(p: &Path) -> String {
+pub(super) fn read(p: &Path) -> String {
     String::from_utf8_lossy(&std::fs::read(p).unwrap_or_default()).into_owned()
 }
 
 /// Replaces a file without writing through a hardlink (the roots hardlink their originals).
-fn replace(p: &Path, bytes: &[u8]) -> Result<(), String> {
+pub(super) fn replace(p: &Path, bytes: &[u8]) -> Result<(), String> {
     let _ = std::fs::remove_file(p);
     std::fs::write(p, bytes).map_err(|e| format!("{}: {e}", p.display()))
 }
 
-fn copy_fresh(from: &Path, to: &Path) -> Result<(), String> {
+pub(super) fn copy_fresh(from: &Path, to: &Path) -> Result<(), String> {
     let _ = std::fs::remove_file(to);
     std::fs::copy(from, to).map(|_| ()).map_err(|e| format!("{} -> {}: {e}", from.display(), to.display()))
 }
 
-fn wait_for(file: &Path, timeout: Duration, cond: impl Fn(&str) -> bool) -> bool {
+pub(super) fn wait_for(file: &Path, timeout: Duration, cond: impl Fn(&str) -> bool) -> bool {
     let t0 = Instant::now();
     while t0.elapsed() < timeout {
         if cond(&read(file)) {
@@ -128,7 +128,7 @@ fn wait_for(file: &Path, timeout: Duration, cond: impl Fn(&str) -> bool) -> bool
 
 /// `quit` over rcon so the engine runs ServerDeactivate (the plugin saves); `stop.sh` if the
 /// server is still up after 20 s.
-fn quit(r: &Root, testenv: &Path) {
+pub(super) fn quit(r: &Root, testenv: &Path) {
     rcon(testenv, r.port, "quit");
     let t0 = Instant::now();
     while running(r) && t0.elapsed() < Duration::from_secs(20) {
@@ -138,7 +138,7 @@ fn quit(r: &Root, testenv: &Path) {
 }
 
 /// tsx and tsfun as tsmod-amxx-rs's dist has them, building it when they are missing.
-fn tsmod_amxx_modules(t: &Target) -> Result<Vec<PathBuf>, String> {
+pub(super) fn tsmod_amxx_modules(t: &Target) -> Result<Vec<PathBuf>, String> {
     let dir = env_path("TSMOD_AMXX_DIR", home().join("dev/hl/tsmod-amxx-rs"));
     let modules = dir.join("dist").join(t.platform).join("addons/amxmodx/modules");
     let files: Vec<PathBuf> = ["tsx", "tsfun"].iter().map(|m| modules.join((t.amxx_file)(m))).collect();
@@ -155,7 +155,7 @@ fn tsmod_amxx_modules(t: &Target) -> Result<Vec<PathBuf>, String> {
 /// profiles, so the bots have MegaHAL brains to save (`botprofiles/<id>_hal.brn`); chat lines;
 /// bot_config.ini turning chatting and replies (to bots too) on; and MAP2's map config turning
 /// `ts_kungfu` on (the bots fight with kung fu there), which also runs the map config path.
-fn fixtures() -> Vec<(String, String)> {
+pub(super) fn fixtures() -> Vec<(String, String)> {
     let mut f = vec![("bot_profiles.ini".to_owned(), "1\n2\n3\n4\n".to_owned())];
     for (id, name, skill) in [(1, "Neo", 80), (2, "Trinity", 70), (3, "Morpheus", 90), (4, "Switch", 60)] {
         f.push((
@@ -239,7 +239,7 @@ fn saved_files() -> Vec<(String, FileMatch)> {
 }
 
 /// The files under `dir` (relative, `/`-separated) modified at or after `since`.
-fn fresh_files(dir: &Path, since: SystemTime) -> Vec<String> {
+pub(super) fn fresh_files(dir: &Path, since: SystemTime) -> Vec<String> {
     fn walk(base: &Path, dir: &Path, since: SystemTime, out: &mut Vec<String>) {
         let Ok(rd) = std::fs::read_dir(dir) else { return };
         for e in rd.flatten() {
@@ -267,12 +267,12 @@ const RCON_CHECKS: [(&str, &str); 3] = [
 
 /// The files the run changes (the configs, RCBot's fixtures), restored afterwards whatever happens;
 /// a directory the run made for a file that wasn't there goes again if it is empty.
-struct Backup {
+pub(super) struct Backup {
     files: Vec<(PathBuf, Option<Vec<u8>>)>,
 }
 
 impl Backup {
-    fn take(paths: &[PathBuf]) -> Backup {
+    pub(super) fn take(paths: &[PathBuf]) -> Backup {
         Backup { files: paths.iter().map(|p| (p.clone(), std::fs::read(p).ok())).collect() }
     }
 }
@@ -297,7 +297,7 @@ impl Drop for Backup {
 }
 
 /// Adds `line` unless a line with the same first word is there (uncommented).
-fn with_line(text: &str, line: &str) -> String {
+pub(super) fn with_line(text: &str, line: &str) -> String {
     let key = line.split_whitespace().next().unwrap_or(line);
     if text.lines().any(|l| l.split_whitespace().next() == Some(key)) {
         return text.to_owned();
@@ -306,8 +306,9 @@ fn with_line(text: &str, line: &str) -> String {
     format!("{text}{sep}; tsmod-amxx-rcbot e2e\n{line}\n")
 }
 
-/// plugins.ini with other e2e plugins commented out and ours enabled.
-fn plugins_ini(text: &str) -> String {
+/// plugins.ini with other e2e plugins commented out and ours enabled (with AMX Mod X's `debug`
+/// flag: stack traces, and its own timing warnings).
+pub(super) fn plugins_ini(text: &str, debug: bool) -> String {
     let mut out: Vec<String> = text
         .lines()
         .map(|l| {
@@ -316,11 +317,11 @@ fn plugins_ini(text: &str) -> String {
         })
         .filter(|l| l.split_whitespace().next() != Some(&format!("{PLUGIN}.amxx")))
         .collect();
-    out.push(format!("; tsmod-amxx-rcbot e2e\n{PLUGIN}.amxx debug"));
+    out.push(format!("; tsmod-amxx-rcbot e2e\n{PLUGIN}.amxx{}", if debug { " debug" } else { "" }));
     out.join("\n") + "\n"
 }
 
-fn install(r: &Root, tsmod: &[PathBuf]) -> Result<(), String> {
+pub(super) fn install(r: &Root, tsmod: &[PathBuf], debug: bool) -> Result<(), String> {
     let amxx = r.dir.join("ts/addons/amxmodx");
     for f in tsmod {
         copy_fresh(f, &amxx.join("modules").join(f.file_name().unwrap()))?;
@@ -342,7 +343,7 @@ fn install(r: &Root, tsmod: &[PathBuf]) -> Result<(), String> {
     }
     replace(&modules_ini, text.as_bytes())?;
     let plugins = amxx.join("configs/plugins.ini");
-    replace(&plugins, plugins_ini(&read(&plugins)).as_bytes())?;
+    replace(&plugins, plugins_ini(&read(&plugins), debug).as_bytes())?;
     let cfg = r.dir.join("ts/server.cfg");
     replace(&cfg, format!("{}{SERVER_CFG_LINES}", read(&cfg)).as_bytes())?;
     let data = r.dir.join("ts/tsmod/rcbot");
@@ -373,7 +374,7 @@ fn e2e_root(r: &Root, testenv: &Path, tsmod: &[PathBuf]) -> Result<Vec<String>, 
     let mut backed = vec![amxx.join("configs/modules.ini"), amxx.join("configs/plugins.ini"), r.dir.join("ts/server.cfg")];
     backed.extend(fixtures().into_iter().map(|(rel, _)| r.dir.join("ts/tsmod/rcbot").join(rel)));
     let _backup = Backup::take(&backed);
-    install(r, tsmod)?;
+    install(r, tsmod, true)?;
     let log = amxx.join(format!("logs/{LOG}"));
     let started = SystemTime::now();
     run(Command::new(testenv.join("run.sh")).args([r.os, "--map", MAP1, "--bots", "0"]))?;
@@ -487,7 +488,7 @@ mod tests {
     #[test]
     fn plugins_ini_disables_other_e2e_plugins_and_adds_ours_once() {
         let text = "admin.amxx\ntsbot_e2e.amxx debug\n;ham_e2e.amxx debug\nrcbot_amxx.amxx\n";
-        let out = plugins_ini(text);
+        let out = plugins_ini(text, true);
         assert!(out.contains(";tsbot_e2e.amxx debug"));
         assert!(out.contains(";ham_e2e.amxx debug") && !out.contains(";;ham"));
         assert_eq!(out.matches("rcbot_amxx.amxx").count(), 1);

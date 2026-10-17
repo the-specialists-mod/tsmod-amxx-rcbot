@@ -73,7 +73,7 @@ include/         rcbot_megahal.inc, rcbot_learn.inc, rcbot_nav.inc (shipped in d
 scripting/       Pawn plugins; scripting/test/rcbot_modules_smoke.sma calls every native
 scripting/rcbot_amxx.sma, scripting/rcbot/   the Pawn bot (docs/pawn.md)
 docs/            pawn.md (Pawn conventions, ownership), design.md (Rust -> Pawn map)
-xtask/           cargo xtask build | dist | lint | test | pawn | e2e (src/e2e.rs)
+xtask/           cargo xtask build | dist | lint | test | pawn | e2e (src/e2e.rs) | compat (src/compat.rs) | perf (src/perf.rs)
 ```
 
 1. **No `unsafe` in this repository** except what `amxx::export_module!`, `amxx::export_metamod!`
@@ -136,6 +136,15 @@ weapon switch, turning, a kill, chat and a MegaHAL reply, ...), the `rcbot` comm
 the run, and the error logs; it restores the configs and files it changed. The `~/games` roots
 are shared: never start servers there outside an e2e run (and run e2e only when nothing else uses
 them), and stop them with the testenv's `stop.sh`.
+
+`cargo xtask compat [linux] [win]` (`xtask/src/compat.rs`) shows the data files are shared with
+the standalone tsmod_rcbot on one root: rcbot_amxx plays and writes every learned file, then
+tsmod_rcbot (`../tsmod-rcbot-rs/dist`, loaded by the port from `ts/dlls/`) loads, plays and
+rewrites them, then rcbot_amxx loads what it wrote (report.inc's `file` lines for the Pawn
+readers, `.rkf` and `.rcr`); `ts/tsmod/rcbot/` is restored afterwards. crates/learn's
+`compat_tests` load a checked-in run's files (`crates/learn/tests/compat/pawn/`) with `rcbot`'s
+loaders and save them back byte for byte. `cargo xtask perf [linux] [win]` times `ts_frame`
+(`rcbot_profile`, plugin without `debug`) with 4, 16 and 31 bots and prints the server's fps.
 
 Before calling a change done: `cargo fmt`, `cargo xtask test`, `cargo xtask lint`, and
 `cargo xtask dist` when exports or the build change.

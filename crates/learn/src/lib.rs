@@ -25,6 +25,8 @@ pub mod objects;
 pub mod state;
 
 #[cfg(test)]
+mod compat_tests;
+#[cfg(test)]
 mod tests;
 
 #[allow(unsafe_code)]
