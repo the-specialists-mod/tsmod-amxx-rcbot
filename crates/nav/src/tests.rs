@@ -794,7 +794,7 @@ fn pvs_asks_the_world_for_the_viewer() {
 
 #[test]
 fn invalid_arguments_dont_panic() {
-    setup("invalid", FakeWorld::default());
+    let _d = setup("invalid", FakeWorld::default());
     let mut a = FakeArgs::new(&[]);
     let o = v3(&mut a, 0.0, 0.0, 0.0);
     for w in [-5, 0, 1023, 1024, 99999] {

@@ -63,7 +63,7 @@ fn profile_zero_stays_in_memory() {
 
 #[test]
 fn learning_and_replying() {
-    setup("reply");
+    let _d = setup("reply");
     let mut a = FakeArgs::new(&[]);
     let h = load(&mut a, 0);
     let line = a.alloc_str("The quick brown fox jumps over the lazy dog");
@@ -102,7 +102,7 @@ fn learning_and_replying() {
 
 #[test]
 fn bad_handles_are_native_errors() {
-    setup("bad");
+    let _d = setup("bad");
     let mut a = FakeArgs::new(&[]);
     a.params = vec![3];
     assert_eq!(n::hal_words(&mut a), 0);
@@ -114,7 +114,7 @@ fn bad_handles_are_native_errors() {
 
 #[test]
 fn free_zeroes_the_variable() {
-    setup("free");
+    let _d = setup("free");
     let mut a = FakeArgs::new(&[]);
     let h = load(&mut a, 0);
     let var = a.alloc(vec![h]);
@@ -179,7 +179,7 @@ fn chat_lines_and_picks() {
 
 #[test]
 fn chat_helpers() {
-    setup("helpers");
+    let _d = setup("helpers");
     let mut a = FakeArgs::new(&[9]);
     assert_eq!(n::chat_rep_array(&mut a), 2);
     a.params = vec![-1];

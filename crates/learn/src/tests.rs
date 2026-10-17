@@ -142,7 +142,7 @@ fn globals_round_trip_in_rcbots_layout() {
 
 #[test]
 fn decisions_use_the_genes() {
-    setup("decide");
+    let _d = setup("decide");
     let mut a = FakeArgs::new(&[]);
     let b = bot(&mut a, 0, "x");
     a.params = vec![b, 0];
@@ -171,7 +171,7 @@ fn decisions_use_the_genes() {
 
 #[test]
 fn weapon_scores_need_samples() {
-    setup("weapons");
+    let _d = setup("weapons");
     let mut a = FakeArgs::new(&[]);
     let b = bot(&mut a, 0, "x");
     let score = a.alloc(vec![0]);
@@ -201,7 +201,7 @@ fn weapon_scores_need_samples() {
 
 #[test]
 fn loadouts() {
-    setup("loadouts");
+    let _d = setup("loadouts");
     let mut a = FakeArgs::new(&[]);
     assert_eq!(n::rl_loadout_count(&mut a), rcbot::learn::loadout::LOADOUTS.len() as Cell);
     let ids = a.alloc(vec![0; 4]);
@@ -228,7 +228,7 @@ fn loadouts() {
 
 #[test]
 fn opponents_by_player_slot() {
-    setup("opponents");
+    let _d = setup("opponents");
     let mut a = FakeArgs::new(&[]);
     a.params = vec![4];
     assert_eq!(fl(n::rl_opp_threat(&mut a)), 1.0, "unknown player");
@@ -263,7 +263,7 @@ fn opponents_by_player_slot() {
 
 #[test]
 fn the_ledger() {
-    setup("ledger");
+    let _d = setup("ledger");
     let mut a = FakeArgs::new(&[]);
     let b = bot(&mut a, 0, "x");
     a.params = vec![b, f(10.0), 3, 13, f(50.0), f(0.0), 0, 0, f(300.0), 2];
@@ -324,7 +324,7 @@ fn a_ga_breeds_saves_and_loads() {
 
 #[test]
 fn perceptrons_learn_and_persist() {
-    setup("perceptron");
+    let _d = setup("perceptron");
     let mut a = FakeArgs::new(&[2, f(0.5)]);
     let p = o::rl_perceptron_create(&mut a);
     let w = floats(&mut a, &[0.0, 1.0, -1.0]);
@@ -358,7 +358,7 @@ fn perceptrons_learn_and_persist() {
 
 #[test]
 fn networks_and_maps() {
-    setup("nnsom");
+    let _d = setup("nnsom");
     let mut a = FakeArgs::new(&[1, 3, 4, 2]);
     let nn = o::rl_nn_create(&mut a);
     let ins = floats(&mut a, &[0.1, 0.2, 0.3]);
