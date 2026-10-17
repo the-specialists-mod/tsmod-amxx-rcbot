@@ -196,6 +196,8 @@ fn install(r: &Root, tsmod: &[PathBuf]) -> Result<(), String> {
         )?;
     }
     copy_fresh(&root().join(format!("target/pawn/{PLUGIN}.amxx")), &amxx.join(format!("plugins/{PLUGIN}.amxx")))?;
+    // RCBot's data (bot_weapons.ini, the waypoints), as dist ships it: ts/tsmod/rcbot/.
+    super::copy_dir(&root().join("dist").join(r.target.platform).join("tsmod/rcbot"), &r.dir.join("ts/tsmod/rcbot"))?;
     let modules_ini = amxx.join("configs/modules.ini");
     let mut text = read(&modules_ini);
     for m in ["tsx", "tsfun", "rcbot_megahal", "rcbot_learn", "rcbot_nav"] {

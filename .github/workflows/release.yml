@@ -85,7 +85,7 @@ jobs:
           for dir in dist/*/; do
             platform=$(basename "$dir")
             cp LICENSE GPL-EXCEPTION.txt README.md "$dir"
-            (cd "$dir" && zip -qr "$GITHUB_WORKSPACE/out/tsmod-amxx-rcbot-$version-$platform.zip" addons LICENSE GPL-EXCEPTION.txt README.md)
+            (cd "$dir" && zip -qr "$GITHUB_WORKSPACE/out/tsmod-amxx-rcbot-$version-$platform.zip" addons tsmod LICENSE GPL-EXCEPTION.txt README.md)
           done
           ls -l out
 

@@ -164,8 +164,42 @@ fn check_library(t: &Target, lib: &Path, metamod: bool) -> Result<(), String> {
     Ok(())
 }
 
+/// RCBot's shipped data (`bot_weapons.ini`, `waypoints/ts/*.rcw`): tsmod-rcbot-rs's `data/rcbot`
+/// at the pinned `rcbot` source, found through cargo (the crate is `crates/rcbot` in that repo).
+fn rcbot_data() -> Result<PathBuf, String> {
+    let out = cargo().args(["metadata", "--format-version", "1"]).output().map_err(|e| format!("cargo metadata: {e}"))?;
+    let json = String::from_utf8_lossy(&out.stdout);
+    // Without a JSON parser: the manifest path that ends in the rcbot crate's Cargo.toml.
+    let manifest = json
+        .split("\"manifest_path\":\"")
+        .skip(1)
+        .filter_map(|r| r.split('"').next())
+        .map(|m| m.replace("\\\\", "/")) // JSON-escaped Windows separators
+        .find(|m| m.ends_with("crates/rcbot/Cargo.toml"))
+        .ok_or("cargo metadata has no rcbot crate")?;
+    let repo = Path::new(&manifest).ancestors().nth(3).ok_or("rcbot's manifest path is too short")?;
+    let data = repo.join("data/rcbot");
+    if data.is_dir() { Ok(data) } else { Err(format!("no RCBot data in {}", data.display())) }
+}
+
+fn copy_dir(from: &Path, to: &Path) -> Result<(), String> {
+    std::fs::create_dir_all(to).map_err(|e| format!("{}: {e}", to.display()))?;
+    for e in std::fs::read_dir(from).map_err(|e| format!("{}: {e}", from.display()))? {
+        let e = e.map_err(|e| e.to_string())?;
+        let dest = to.join(e.file_name());
+        if e.path().is_dir() {
+            copy_dir(&e.path(), &dest)?;
+        } else {
+            std::fs::copy(e.path(), &dest).map_err(|err| format!("{}: {err}", e.path().display()))?;
+        }
+    }
+    Ok(())
+}
+
 fn dist(debug_info: bool) -> Result<(), String> {
     build(true)?;
+    pawn(true)?;
+    let data = rcbot_data()?;
     for t in &TARGETS {
         let base = root().join("dist").join(t.platform).join("addons/amxmodx");
         let dir = base.join("modules");
@@ -185,6 +219,13 @@ fn dist(debug_info: bool) -> Result<(), String> {
         for f in INCLUDES {
             std::fs::copy(root().join("include").join(f), inc.join(f)).map_err(|e| e.to_string())?;
         }
+        // The plugin, its sources (for admins who change the bot) and RCBot's data directory.
+        let plugins = base.join("plugins");
+        std::fs::create_dir_all(&plugins).map_err(|e| e.to_string())?;
+        std::fs::copy(root().join("target/pawn/rcbot_amxx.amxx"), plugins.join("rcbot_amxx.amxx")).map_err(|e| e.to_string())?;
+        std::fs::copy(root().join("scripting/rcbot_amxx.sma"), base.join("scripting/rcbot_amxx.sma")).map_err(|e| e.to_string())?;
+        copy_dir(&root().join("scripting/rcbot"), &base.join("scripting/rcbot"))?;
+        copy_dir(&data, &root().join("dist").join(t.platform).join("tsmod/rcbot"))?;
     }
     Ok(())
 }

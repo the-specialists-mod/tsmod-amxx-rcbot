@@ -175,8 +175,8 @@ dependencies = [
 
 [[package]]
 name = "rcbot"
-version = "0.2.0"
-source = "git+https://github.com/the-specialists-mod/tsmod-rcbot-rs?tag=v0.2.0#3e6f1ef2852b41ed7f391485616af2e76203d56f"
+version = "0.3.0"
+source = "git+https://github.com/the-specialists-mod/tsmod-rcbot-rs?tag=v0.3.0#0151cfd55d89c272ccd3cf5380229c2f179158c0"
 dependencies = [
  "miniz_oxide",
 ]

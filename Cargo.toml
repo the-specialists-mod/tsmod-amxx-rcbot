@@ -18,7 +18,7 @@ repository = "https://github.com/the-specialists-mod/tsmod-amxx-rcbot"
 # goldsrc-sys generates bindings from the FWGS headers (`FWGS_DIR`, see .cargo/config.toml).
 amxx = { git = "https://github.com/the-specialists-mod/tsmod-amxx-rs", tag = "v0.3.0" }
 # RCBot's pure-Rust bot library: MegaHAL, bot_chat.ini, the learners and their file formats.
-rcbot = { git = "https://github.com/the-specialists-mod/tsmod-rcbot-rs", tag = "v0.2.0" }
+rcbot = { git = "https://github.com/the-specialists-mod/tsmod-rcbot-rs", tag = "v0.3.0" }
 rcbot-amxx-common = { path = "crates/common" }
 
 [profile.dev]
