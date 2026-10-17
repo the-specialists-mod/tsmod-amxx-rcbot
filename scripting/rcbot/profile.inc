@@ -1,6 +1,7 @@
 // rcbot/profile.inc: bot profiles (bot_profiles.ini, botprofiles/<id>.ini).
 // Owner: social. Ports config/profile.rs (BotProfile::init, BotProfile::read,
 // parse_profile_list, choose_profile, profile_file_name) and host bots.rs profile_for.
+// BotProfile::write isn't ported: only upstream's old, commented-out disconnect code called it.
 // RCBot by Paul "Cheeseh" Murphy; tsmod-amxx-rcbot, GPL-3.0-or-later with the AMX Mod X and RCBot
 // linking exceptions.
 //
@@ -35,12 +36,17 @@ stock profile_init(id)
 	g_pr_f[id][PR_AIM_TIME] = 1.0;
 	g_pr_f[id][PR_VISION_TIME] = g_cfg_f[CFG_UPDATE_VIS_TIME];
 	g_pr_model[id][0] = 0;
+	for (new k = 0; k < PR_HAL_FILES; k++)
+	{
+		g_pr_hal_file[id][k][0] = 0;
+	}
 	copy(g_bot_name[id], charsmax(g_bot_name[]), BOT_DEFAULT_NAME);
 }
 
 // host bots.rs profile_for: <again>.ini (a bot coming back after a map change), else
-// BotFunc_AddBot's choice among bot_profiles.ini's ids no other bot uses, else the defaults
-// (id 0: upstream adds no bot then; the port has to, design §4). id is the slot being filled.
+// BotFunc_AddBot's choice among bot_profiles.ini's ids no other bot uses (choose_profile), else
+// the defaults (id 0: upstream adds no bot then; the port has to, design §4). id is the slot
+// being filled.
 stock profile_for(id, again)
 {
 	profile_init(id);
@@ -48,12 +54,12 @@ stock profile_for(id, again)
 	{
 		return;
 	}
-	static text[RC_PROFILE_FILE_LEN];
-	if (files_read_text(BOT_PROFILES_FILE, text, sizeof(text)) < 0)
+	new ids[RC_MAX_PROFILE_IDS], words[RC_MAX_PROFILE_IDS][10];
+	new n = profile_parse_list(ids, words, RC_MAX_PROFILE_IDS);
+	if (n < 0)
 	{
 		return;
 	}
-	new ids[RC_MAX_PROFILE_IDS], n = profile_parse_list(text, ids, sizeof(ids));
 	new can_use[RC_MAX_PROFILE_IDS], m = 0;
 	new rel[64], path[RC_PATH_LEN];
 	for (new k = 0; k < n; k++)
@@ -63,7 +69,8 @@ stock profile_for(id, again)
 		{
 			continue;
 		}
-		formatex(rel, charsmax(rel), "%s/%d.ini", BOT_PROFILES_FOLDER, pid);
+		// Upstream checks the word + ".ini" ("12abc.ini") and loads "%d.ini" (ProfileListEntry).
+		formatex(rel, charsmax(rel), "%s/%s.ini", BOT_PROFILES_FOLDER, words[k]);
 		if (files_find(path, charsmax(path), rel))
 		{
 			can_use[m++] = pid;
@@ -93,134 +100,177 @@ stock bool:profile_in_use(pid, except)
 	return false;
 }
 
-// parse_profile_list: whitespace-separated words of at most 9 characters, each atoi'd.
-// TODO(config): upstream checks the word + ".ini" ("12abc.ini") but loads "%d.ini"; this checks
-// "%d.ini" (ProfileListEntry::file).
-stock profile_parse_list(const text[], ids[], max)
+// parse_profile_list over bot_profiles.ini (fscanf "%9s"): whitespace-separated words of at
+// most 9 bytes (longer words split), each atoi'd. -1 without the file.
+stock profile_parse_list(ids[], words[][10], max)
 {
-	new n = 0, i = 0, word[10];
-	while (text[i] && n < max)
+	new path[RC_PATH_LEN];
+	if (!cfg_open(BOT_PROFILES_FILE, path, charsmax(path)))
 	{
-		while (text[i] && isspace(text[i]))
-		{
-			i++;
-		}
-		if (!text[i])
-		{
-			break;
-		}
-		new w = 0;
-		while (text[i] && !isspace(text[i]) && w < 9)
-		{
-			word[w++] = text[i++];
-		}
-		word[w] = 0;
-		ids[n++] = str_to_num(word);
+		return -1;
 	}
+	new n = 0, w = 0, c;
+	new word[10];
+	for (;;)
+	{
+		c = cfg_profile_list_getc();
+		if (c == -1 || cfg_is_space(c) || w == 9)
+		{
+			if (w > 0 && n < max)
+			{
+				word[w] = 0;
+				copy(words[n], 9, word);
+				ids[n++] = str_to_num(word);
+			}
+			w = 0;
+			if (c == -1)
+			{
+				break;
+			}
+			if (cfg_is_space(c))
+			{
+				continue;
+			}
+		}
+		word[w++] = c;
+	}
+	cfg_close();
 	return n;
 }
 
-// BotProfile::read over botprofiles/<pid>.ini: keys matched by prefix, numbers with atoi/atof,
-// strings from after the opening quote to the next quote (model= has none).
-// TODO(config): upstream's fgets(127) chunking and "#" comments per chunk, bottomcolor /
-// topcolor clamping, favmap/spray/numgames/NS keys, the 63-byte string cut (profile.rs read).
+// fscanf reads the file as it is (no fgets chunks): a byte at a time through cfg_fgets' reader.
+static cfg_profile_list_getc()
+{
+	new b[2];
+	return cfg_fgets(b, 2) == -1 ? -1 : (b[0] ? b[0] : ' ');
+}
+
+// BotProfile::read over botprofiles/<pid>.ini: fgets(127) chunks, "#" comments, keys matched by
+// prefix (case-sensitive), numbers with atoi/atof, strings read from a fixed offset to the next
+// quote (at most 63 bytes): the offset skips the opening quote of name="...", favmap, spray and
+// the hal_*_file keys, but not model=, so model="gordon" gives an empty model. favmap, spray and
+// the NS percentages aren't kept (nothing reads them on TS).
 stock bool:profile_read(id, pid)
 {
-	static text[RC_PROFILE_FILE_LEN];
-	new rel[64];
+	new rel[64], path[RC_PATH_LEN];
 	formatex(rel, charsmax(rel), "%s/%d.ini", BOT_PROFILES_FOLDER, pid);
-	if (files_read_text(rel, text, sizeof(text)) < 0)
+	if (!cfg_open(rel, path, charsmax(path)))
 	{
 		return false;
 	}
 	g_pr_i[id][PR_ID] = pid;
-	new line[128], pos = 0, len;
-	while ((len = profile_next_line(text, pos, line, charsmax(line))) >= 0)
+	new line[128];
+	while (cfg_fgets(line, 127) != -1)
 	{
-		if (len == 0 || line[0] == '#')
+		if (!cfg_strip_line(line))
 		{
 			continue;
 		}
+		new len = strlen(line);
 		if (equal(line, "name=", 5))
 		{
-			profile_string(line[5], g_bot_name[id], charsmax(g_bot_name[]));
-		}
-		else if (equal(line, "skill=", 6))
-		{
-			g_pr_i[id][PR_SKILL] = str_to_num(line[6]);
-		}
-		else if (equal(line, "favteam=", 8))
-		{
-			g_pr_i[id][PR_FAV_TEAM] = str_to_num(line[8]);
-		}
-		else if (equal(line, "aim_speed=", 10))
-		{
-			g_pr_f[id][PR_AIM_SPEED] = str_to_float(line[10]);
-		}
-		else if (equal(line, "aim_skill=", 10))
-		{
-			g_pr_f[id][PR_AIM_SKILL] = str_to_float(line[10]);
-		}
-		else if (equal(line, "aim_time=", 9))
-		{
-			g_pr_f[id][PR_AIM_TIME] = str_to_float(line[9]);
-		}
-		else if (equal(line, "max_path_revs=", 14))
-		{
-			g_pr_i[id][PR_PATH_REVS] = str_to_num(line[14]);
-		}
-		else if (equal(line, "max_update_vision_revs=", 23))
-		{
-			g_pr_i[id][PR_VISION_REVS] = str_to_num(line[23]);
-		}
-		else if (equal(line, "update_vision_time=", 19))
-		{
-			g_pr_f[id][PR_VISION_TIME] = str_to_float(line[19]);
+			profile_string(line, len, 6, g_bot_name[id], charsmax(g_bot_name[]));
 		}
 		else if (equal(line, "class=", 6))
 		{
-			g_pr_i[id][PR_CLASS] = str_to_num(line[6]);
+			g_pr_i[id][PR_CLASS] = profile_num(line, len, 6);
 		}
 		else if (equal(line, "model=", 6))
 		{
-			// No quote skipped: model="x" gives an empty model, as upstream.
-			profile_string(line[6], g_pr_model[id], charsmax(g_pr_model[]));
+			profile_string(line, len, 6, g_pr_model[id], charsmax(g_pr_model[]));
+		}
+		else if (equal(line, "favmod=", 7))
+		{
+			g_pr_i[id][PR_FAV_MOD] = profile_num(line, len, 7);
+		}
+		else if (equal(line, "favteam=", 8))
+		{
+			g_pr_i[id][PR_FAV_TEAM] = profile_num(line, len, 8);
+		}
+		else if (equal(line, "skill=", 6))
+		{
+			g_pr_i[id][PR_SKILL] = profile_num(line, len, 6);
+		}
+		else if (equal(line, "aim_speed=", 10))
+		{
+			g_pr_f[id][PR_AIM_SPEED] = profile_float(line, len, 10);
+		}
+		else if (equal(line, "aim_skill=", 10))
+		{
+			g_pr_f[id][PR_AIM_SKILL] = profile_float(line, len, 10);
+		}
+		else if (equal(line, "aim_time=", 9))
+		{
+			g_pr_f[id][PR_AIM_TIME] = profile_float(line, len, 9);
+		}
+		else if (equal(line, "bottomcolor=", 12))
+		{
+			g_pr_i[id][PR_BOTTOM_COLOUR] = clamp(profile_num(line, len, 12), 0, 255);
+		}
+		else if (equal(line, "topcolor=", 9))
+		{
+			g_pr_i[id][PR_TOP_COLOUR] = clamp(profile_num(line, len, 9), 0, 255);
+		}
+		else if (equal(line, "numgames=", 9))
+		{
+			g_pr_i[id][PR_NUM_GAMES] = profile_num(line, len, 9);
+		}
+		else if (equal(line, "hal_pretrain_file=", 18))
+		{
+			profile_string(line, len, 19, g_pr_hal_file[id][PR_HAL_PRETRAIN], charsmax(g_pr_hal_file[][]));
+		}
+		else if (equal(line, "hal_aux_file=", 13))
+		{
+			profile_string(line, len, 14, g_pr_hal_file[id][PR_HAL_AUX], charsmax(g_pr_hal_file[][]));
+		}
+		else if (equal(line, "hal_ban_file=", 13))
+		{
+			profile_string(line, len, 14, g_pr_hal_file[id][PR_HAL_BAN], charsmax(g_pr_hal_file[][]));
+		}
+		else if (equal(line, "hal_swap_file=", 14))
+		{
+			profile_string(line, len, 15, g_pr_hal_file[id][PR_HAL_SWAP], charsmax(g_pr_hal_file[][]));
+		}
+		else if (equal(line, "max_path_revs=", 14))
+		{
+			g_pr_i[id][PR_PATH_REVS] = profile_num(line, len, 14);
+		}
+		else if (equal(line, "max_update_vision_revs=", 23))
+		{
+			g_pr_i[id][PR_VISION_REVS] = profile_num(line, len, 23);
+		}
+		else if (equal(line, "update_vision_time=", 19))
+		{
+			g_pr_f[id][PR_VISION_TIME] = profile_float(line, len, 19);
 		}
 	}
+	cfg_close();
 	return true;
 }
 
-// A quoted value: skip one opening quote, copy to the next quote or the end.
-static profile_string(const from[], out[], len)
+// read's string(at): from byte at to the next quote or the end, at most 63 bytes (out's size
+// is the smaller bound for the name).
+static profile_string(const line[], len, at, out[], max)
 {
-	new i = from[0] == '"' ? 1 : 0, o = 0;
-	while (from[i] && from[i] != '"' && o < len)
+	new o = 0;
+	if (max > 63)
 	{
-		out[o++] = from[i++];
+		max = 63;
+	}
+	for (new i = at; i < len && line[i] != '"' && o < max; i++)
+	{
+		out[o++] = line[i];
 	}
 	out[o] = 0;
 }
 
-// The next line of text from pos (without "\r\n"); -1 at the end.
-static profile_next_line(const text[], &pos, line[], len)
+// read's num(at): atoi of the rest, 0 past the end.
+static profile_num(const line[], len, at)
 {
-	if (!text[pos])
-	{
-		return -1;
-	}
-	new o = 0;
-	while (text[pos] && text[pos] != '^n')
-	{
-		if (text[pos] != '^r' && o < len)
-		{
-			line[o++] = text[pos];
-		}
-		pos++;
-	}
-	if (text[pos] == '^n')
-	{
-		pos++;
-	}
-	line[o] = 0;
-	return o;
+	return at <= len ? str_to_num(line[at]) : 0;
+}
+
+static Float:profile_float(const line[], len, at)
+{
+	return at <= len ? str_to_float(line[at]) : 0.0;
 }

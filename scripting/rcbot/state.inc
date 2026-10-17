@@ -725,6 +725,43 @@ new Float:g_ev_f[RC_SLOTS][Ev_F];
 stock g_ev_chat_string[RC_SLOTS][RC_ACTION_TEXT];
 
 // ============================================================================================
+// client (owner: social; client.inc, commands.inc, menu.inc, rep.inc). config/client.rs Client
+// (CClient's command part) per player index 1..32 (CClients' slot ENTINDEX - 1), host bots.rs
+// State::rep_ids and lib.rs force_grips. Here, not in client.inc, because rep.inc and menu.inc
+// (included before client.inc) read it.
+// ============================================================================================
+
+enum Cl_I
+{
+	CL_USED,				// m_pPlayer: Some
+	CL_ACCESS,				// m_iAccessLevel: CMD_ACCESS_* bits
+	CL_REP_ID,				// m_iPlayerId: the reputation id, -1 none
+	CL_RECHECK_AUTH,		// m_bRecheckAuth
+	CL_MENU,				// m_pMenu: MENU_* (menu.inc), -1 none
+	CL_LAST_KEY,			// m_iLastMenuItemSelected, -1 none
+	CL_CURRENT_WPT,			// m_iCurrentWaypoint, -1 none
+	CL_WAYPOINT_ON,			// m_bWaypointOn
+	CL_PATHS_ON,			// m_bWaypointPathsOn
+	CL_DEBUG_BOT,			// m_iDebugBot: bot index (player - 1), -1 none
+	CL_DEBUG_ENT,			// m_pDebugEnt: entity index, 0 none
+	CL_TELEPORT_SET,		// m_vTeleportVector: Some
+	CL_NO_TOUCH,			// m_bNoTouch
+	CL_CMD,					// m_iCmd: CLIENT_CMD_* bits
+	CL_AUTO_WPT,			// m_bAutoWaypoint
+	CL_DEBUG_AUTO_WPT,		// m_bDebugAutoWaypoint
+	CL_SET_UP_AUTO_WPT,		// m_bSetUpAutoWaypoint
+	CL_TOOLTIPS_SENT,		// m_iToolTipsSent: a bit per TOOLTIP_*
+	CL_GRIP,				// force_grips: the entity +rcbot_force_grip holds, 0 none
+	CL_AUTO_RUNNING			// host editor.rs Editor::auto has an entry (nav_auto_reset when it goes)
+};
+new g_cl_i[RC_SLOTS][Cl_I];
+new Float:g_cl_teleport[RC_SLOTS][3];		// m_vTeleportVector
+new Float:g_cl_display_time[RC_SLOTS];		// editor.rs display_time (m_fWaypointDisplayTime)
+new g_cl_pass[RC_SLOTS][16];				// m_szPass (BOT_MAX_PASSWORD_LEN - 1 bytes)
+new g_cl_steam[RC_SLOTS][32];				// m_szSteamId (STEAM_ID_LEN - 1 bytes)
+new g_cl_listen_server;						// m_pListenServerEdict: player index, 0 none
+
+// ============================================================================================
 // Reset
 // ============================================================================================
 
