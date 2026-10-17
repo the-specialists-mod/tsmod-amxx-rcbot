@@ -451,36 +451,40 @@ to the front drops the last task instead (the Rust queue is unbounded).
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| kungfu.rs KungFu::new (a new bot | `kungfu.inc` `kungfu_bot_init` | stub |
-| think.rs spawn_init's kungfu part | `kungfu.inc` `kungfu_spawn_init` | stub |
-| host bots.rs new_bot | `kungfu.inc` `kungfu_load` | stub |
-| host bots.rs save_bot | `kungfu.inc` `kungfu_save` | stub |
-| kungfu.rs Bot::kungfu_fight | `kungfu.inc` `kungfu_fight` | stub |
-| kungfu.rs Bot::kf_settle | `kungfu.inc` `kungfu_settle` | stub |
-| kungfu.rs Bot::kungfu_face | `kungfu.inc` `kungfu_face` | stub |
-| kungfu.rs KungFu::fighting. | `kungfu.inc` `kungfu_fighting` | stub |
-| kungfu.rs KungFu::opponent | `kungfu.inc` `kungfu_opponent` | stub |
-| kungfu.rs is_ranged (a gun, not a blade or kung fu). | `kungfu.inc` `kungfu_is_ranged` | stub |
+| kungfu.rs KungFu::new (seed_combos, the arms at their priors) | `kungfu.inc` `kungfu_bot_init` | ported |
+| think.rs spawn_init's kungfu part (kf_settle(Broken), reset_fight) | `kungfu.inc` `kungfu_spawn_init` | ported |
+| host bots.rs new_bot: KungFu::load from botprofiles/<key>.rkf | `kungfu.inc` `kungfu_load` | ported (key from rl_bot_key) |
+| host bots.rs save_bot: KungFu::save, atomic | `kungfu.inc` `kungfu_save` | ported |
+| kungfu.rs Bot::kungfu_fight, kf_watch, kf_choose_stance, kf_judge_reaction, kf_react, kf_pick_answer, kf_offence, kf_find_wall, kf_pick_combo, kf_run_combo, kf_close_in, kf_next_step, kf_airborne, kf_phase, kf_power, kf_ready, kf_reaction_time, kf_trade, kf_combo_reward, kf_stance_reward | `kungfu.inc` `kungfu_fight` (+ static `kf_*`) | ported |
+| kungfu.rs Bot::kf_settle | `kungfu.inc` `kungfu_settle` | ported |
+| kungfu.rs Bot::kungfu_face | `kungfu.inc` `kungfu_face` | ported |
+| kungfu.rs KungFu::fighting. | `kungfu.inc` `kungfu_fighting` | ported |
+| kungfu.rs KungFu::opponent | `kungfu.inc` `kungfu_opponent` | ported |
+| kungfu.rs is_ranged (a gun, not a blade or kung fu). | `kungfu.inc` `kungfu_is_ranged` | ported |
+| kungfu.rs KungFu combo_runs / combo_done / breed / lesson_weight / stance_estimate / answer_estimate / learn_stance / learn_answer / decay; learn/bandit.rs Arm, ucb, lcb, argmax | `kungfu.inc` static `kf_*` | ported (PerOpponent rows keyed by OpponentKey, at most RC_SLOTS keys a map) |
+| KungFu::save / load, learn/store.rs header / read_header / floats, f32 Display and parse | `kungfu.inc` `kfc_format`, `kfc_parse`, `kfc_float_str`, `kfc_parse_float`, `kfc_read_file`, `kfc_write_file`, `kfc_seed_combos` | ported, byte for byte (scripting/test/rkf_roundtrip.sma) |
 
 ### learning.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| host lib.rs game_init | `learning.inc` `learning_load_globals` | stub |
-| host bots.rs save_globals | `learning.inc` `learning_save_globals` | stub |
-| host bots.rs new_bot | `learning.inc` `learning_bot_load` | stub |
-| host bots.rs save_bot | `learning.inc` `learning_bot_save` | stub |
-| free the handle (rl_bot_free) when the bot leaves. | `learning.inc` `learning_bot_free` | stub |
-| think.rs Think's death | `learning.inc` `learning_on_death` | stub |
-| think.rs spawn_init | `learning.inc` `learning_on_spawn` | stub |
-| learning.rs Bot::learn_think (exposure, shots, ledger tick). | `learning.inc` `learning_think` | stub |
-| learning.rs Bot::choose_loadout (the bandit's pick, rl_loadout_choose) | `learning.inc` `learning_choose_loadout` | stub |
-| manager.rs combat_event for a damage | `learning.inc` `learning_damage_event` | stub |
-| manager.rs combat_event for a kill (KillEvent | `learning.inc` `learning_kill_event` | stub |
-| manager.rs player_stunt (rl_opp_stunt; tsfun's client_stunt). | `learning.inc` `learning_player_stunt` | stub |
-| learning.rs Bot::learned_threat (rl_opp_threat). | `learning.inc` `learning_learned_threat` | stub |
-| learning.rs Bot::waypoint_danger (the heatmap, rcbot_nav). | `learning.inc` `learning_waypoint_danger` | stub |
-| learning.rs Bot::learned_weapon_score (rl_ws_score) | `learning.inc` `learning_weapon_score` | stub |
+| host lib.rs game_init (rl_load_globals, once per server process: localinfo `rcbot_amxx_learn`) and server_activate's opponents.new_map (rl_opp_new_map, every map) | `learning.inc` `learning_load_globals` | ported |
+| host bots.rs save_globals | `learning.inc` `learning_save_globals` | ported |
+| host bots.rs new_bot | `learning.inc` `learning_bot_load` | ported |
+| host bots.rs save_bot | `learning.inc` `learning_bot_save` | ported |
+| free the handle (rl_bot_free) when the bot leaves. | `learning.inc` `learning_bot_free` | ported |
+| think.rs Think's death (death_fitness, prev_team_score, learn_on_death, learned.on_death) | `learning.inc` `learning_on_death` | ported |
+| think.rs spawn_init (learned.on_spawn) | `learning.inc` `learning_on_spawn` | ported |
+| learning.rs Bot::learn_think, credit_loadout | `learning.inc` `learning_think` | ported |
+| learning.rs Bot::choose_loadout (the bandit's pick, rl_loadout_choose) | `learning.inc` `learning_choose_loadout` | ported |
+| manager.rs combat_event for a damage (update_heatmap, update_opponents, Bot::combat_event, blow_weapon) | `learning.inc` `learning_damage_event` | partial: no inflictor, so blow_weapon's non-grenade projectile (-1) counts as the attacker's weapon |
+| manager.rs combat_event for a kill (KillEvent) | `learning.inc` `learning_kill_event` | ported |
+| the port's kill_scored from ts_player_killed and the victim's last ts_damage | `learning.inc` `learning_player_killed` | ported (needs core to call it) |
+| manager.rs refresh_player_keys (PlayerKeys::refresh, rl_opp_set_key on changes) | `learning.inc` `learning_refresh_player_keys`, `learning_player_key` | ported |
+| manager.rs player_stunt (rl_opp_stunt; tsfun's client_stunt). | `learning.inc` `learning_player_stunt` | ported |
+| learning.rs Bot::learned_threat (rl_opp_threat). | `learning.inc` `learning_learned_threat` | ported |
+| learning.rs Bot::waypoint_danger (the heatmap, rcbot_nav). | `learning.inc` `learning_waypoint_danger` | ported |
+| learning.rs Bot::learned_weapon_score (rl_ws_score) | `learning.inc` `learning_weapon_score` | ported |
 
 ### squad.inc
 
