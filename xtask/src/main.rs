@@ -14,6 +14,9 @@
 //!                            shared tsmod/rcbot/: each loads what the other wrote; compat.rs
 //! perf [linux] [win]         rcbot_amxx without `debug`, 4/16/31 bots: ts_frame's cost (rcbot_profile) and the
 //!                            server's fps; perf.rs
+//! perf-compare [linux] [win] native, standalone rcbot and rcbot_amxx on the same root, maps, bot counts and
+//!                            tick rate: process CPU, frames, fps, alive bots, ts_frame; CSV + markdown in
+//!                            target/perf-compare/; perf_compare.rs
 //! ```
 //!
 //! Environment: `FWGS_DIR` (FWGS headers, default: `xash3d-fwgs` next to the checkout or one of its
@@ -27,6 +30,7 @@
 mod compat;
 mod e2e;
 mod perf;
+mod perf_compare;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -342,7 +346,8 @@ fn main() -> ExitCode {
         Some("e2e") => e2e::e2e(&args[1..]),
         Some("compat") => compat::compat(&args[1..]),
         Some("perf") => perf::perf(&args[1..]),
-        _ => Err("usage: cargo xtask <build [--release] | dist [--debug-info] | lint | test | pawn | e2e [linux] [win] | compat [linux] [win] | perf [linux] [win]>".into()),
+        Some("perf-compare") => perf_compare::perf_compare(&args[1..]),
+        _ => Err("usage: cargo xtask <build [--release] | dist [--debug-info] | lint | test | pawn | e2e [linux] [win] | compat [linux] [win] | perf [linux] [win] | perf-compare [linux] [win]>".into()),
     };
     match r {
         Ok(()) => ExitCode::SUCCESS,

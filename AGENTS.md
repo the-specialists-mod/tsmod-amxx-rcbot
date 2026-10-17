@@ -73,7 +73,7 @@ include/         rcbot_megahal.inc, rcbot_learn.inc, rcbot_nav.inc (shipped in d
 scripting/       Pawn plugins; scripting/test/rcbot_modules_smoke.sma calls every native
 scripting/rcbot_amxx.sma, scripting/rcbot/   the Pawn bot (docs/pawn.md)
 docs/            pawn.md (Pawn conventions, ownership), design.md (Rust -> Pawn map)
-xtask/           cargo xtask build | dist | lint | test | pawn | e2e (src/e2e.rs) | compat (src/compat.rs) | perf (src/perf.rs)
+xtask/           cargo xtask build | dist | lint | test | pawn | e2e (src/e2e.rs) | compat (src/compat.rs) | perf (src/perf.rs) | perf-compare
 ```
 
 1. **No `unsafe` in this repository** except what `amxx::export_module!`, `amxx::export_metamod!`
@@ -145,6 +145,13 @@ readers, `.rkf` and `.rcr`); `ts/tsmod/rcbot/` is restored afterwards. crates/le
 `compat_tests` load a checked-in run's files (`crates/learn/tests/compat/pawn/`) with `rcbot`'s
 loaders and save them back byte for byte. `cargo xtask perf [linux] [win]` times `ts_frame`
 (`rcbot_profile`, plugin without `debug`) with 4, 16 and 31 bots and prints the server's fps.
+`cargo xtask perf-compare [linux] [win]` (`xtask/src/perf_compare.rs`) compares the backends on
+one root: `native`, the standalone `rcbot` and `rcbot_amxx`, on ts_dojo and ts_lobby with 0, 4, 16
+and 31 quota bots, three repetitions in a seeded shuffled order, the server pinned with taskset;
+the process' CPU time from `/proc`, the frames and alive bots from
+`scripting/test/perf_alive.sma`, `stats`, rcbot_amxx's ts_frame, and 31 bots at `sys_ticrate
+1000` (the `PC_*` variables in its header). CSV and markdown in `target/perf-compare/`; it
+restores what it changes.
 
 Before calling a change done: `cargo fmt`, `cargo xtask test`, `cargo xtask lint`, and
 `cargo xtask dist` when exports or the build change.

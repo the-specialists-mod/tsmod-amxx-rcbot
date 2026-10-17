@@ -20,20 +20,20 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
-const PROFILE_LOG: &str = "rcbot_amxx_profile.log";
-const SLOTS: u32 = 32;
+pub(super) const PROFILE_LOG: &str = "rcbot_amxx_profile.log";
+pub(super) const SLOTS: u32 = 32;
 
 /// One count's result.
 #[derive(Default, Debug)]
-struct Sample {
-    bots: u32,
-    frames: u64,
-    avg_us: f64,
-    max_us: u64,
-    refresh_us: f64,
-    think_us: f64,
-    act_us: f64,
-    fps: Vec<f64>,
+pub(super) struct Sample {
+    pub(super) bots: u32,
+    pub(super) frames: u64,
+    pub(super) avg_us: f64,
+    pub(super) max_us: u64,
+    pub(super) refresh_us: f64,
+    pub(super) think_us: f64,
+    pub(super) act_us: f64,
+    pub(super) fps: Vec<f64>,
 }
 
 /// The value of `key=` in a profile line.
@@ -43,7 +43,7 @@ fn field(line: &str, key: &str) -> Option<f64> {
 }
 
 /// The profile lines for `bots` bots after `skip` lines: frame-weighted means, the worst frame.
-fn summarize(text: &str, bots: u32, skip: usize) -> Sample {
+pub(super) fn summarize(text: &str, bots: u32, skip: usize) -> Sample {
     let mut s = Sample { bots, ..Sample::default() };
     let (mut sum, mut refresh, mut think, mut act) = (0.0, 0.0, 0.0, 0.0);
     for l in text.lines().filter(|l| l.contains("profile: ")).skip(skip) {
@@ -67,14 +67,23 @@ fn summarize(text: &str, bots: u32, skip: usize) -> Sample {
 
 /// `stats`' FPS column (the header's sixth: CPU In Out Uptime Users FPS Players).
 fn stats_fps(answer: &str) -> Option<f64> {
+    stats_row(answer).map(|(_, fps)| fps)
+}
+
+/// `stats`' CPU and FPS columns (the header's first and sixth: CPU In Out Uptime Users FPS Players).
+pub(super) fn stats_row(answer: &str) -> Option<(f64, f64)> {
     answer.lines().rev().find_map(|l| {
         let v: Vec<&str> = l.split_whitespace().collect();
-        (v.len() >= 7).then(|| v[5].parse().ok()).flatten()
+        if v.len() < 7 {
+            return None;
+        }
+        Some((v[0].parse().ok()?, v[5].parse().ok()?))
     })
 }
 
-/// The testenv's run.sh with 32 slots: amxx_server.cfg, then hlds in the background.
-fn start(r: &Root) -> Result<std::process::Child, String> {
+/// The testenv's run.sh with 32 slots: amxx_server.cfg, then hlds in the background, on `map`;
+/// under `taskset -c <cpus>` when `cpus` is given (perf-compare pins the server).
+pub(super) fn start(r: &Root, map: &str, cpus: Option<&str>) -> Result<std::process::Child, String> {
     let cfg = "// Written by tsmod-amxx-rcbot cargo xtask perf (as amxx-testenv/run.sh)\nexec server.cfg\nrcon_password amxxtest\nlog on\nmp_logecho 0\nts_bot_quota 0\n";
     e2e::replace(&r.dir.join("ts/amxx_server.cfg"), cfg.as_bytes())?;
     let _ = std::fs::remove_file(r.dir.join("qconsole.log"));
@@ -92,11 +101,19 @@ fn start(r: &Root) -> Result<std::process::Child, String> {
         "+servercfgfile",
         "amxx_server.cfg",
         "+map",
-        e2e::MAP1,
+        map,
     ]
     .map(String::from);
+    let wrapped = |program: &str| match cpus {
+        Some(cpus) => {
+            let mut c = Command::new("taskset");
+            c.args(["-c", cpus, program]);
+            c
+        }
+        None => Command::new(program),
+    };
     let mut c = if r.os == "win" {
-        let mut c = Command::new("wine");
+        let mut c = wrapped("wine");
         c.env("WINEPREFIX", env_path("AMXX_WINEPREFIX", home().join("games/wineprefix_amxx"))).env("WINEDEBUG", "-all").args([
             "hlds.exe",
             "-console",
@@ -104,7 +121,7 @@ fn start(r: &Root) -> Result<std::process::Child, String> {
         ]);
         c
     } else {
-        let mut c = Command::new(r.dir.join("hlds_linux"));
+        let mut c = wrapped(&r.dir.join("hlds_linux").to_string_lossy());
         c.env("LD_LIBRARY_PATH", &r.dir).arg("-condebug");
         c
     };
@@ -114,7 +131,7 @@ fn start(r: &Root) -> Result<std::process::Child, String> {
     c.spawn().map_err(|e| format!("{}: {e}", r.os))
 }
 
-fn console_file(r: &Root) -> PathBuf {
+pub(super) fn console_file(r: &Root) -> PathBuf {
     r.dir.join(if r.os == "win" { "qconsole.log" } else { "server-stdout.log" })
 }
 
@@ -122,7 +139,7 @@ fn perf_count(r: &Root, testenv: &Path, bots: u32, warmup: u64, secs: u64) -> Re
     let amxx = r.dir.join("ts/addons/amxmodx");
     let log = amxx.join(format!("logs/{PROFILE_LOG}"));
     let _ = std::fs::remove_file(&log);
-    let mut child = start(r)?;
+    let mut child = start(r, e2e::MAP1, None)?;
     let up = e2e::wait_for(&console_file(r), Duration::from_secs(120), |t| t.contains("[rcbot_amxx] bot backend active"));
     let mut fps = Vec::new();
     if up {
@@ -174,7 +191,7 @@ fn perf_root(r: &Root, testenv: &Path, tsmod: &[PathBuf], counts: &[u32]) -> Res
     counts.iter().map(|&n| perf_count(r, testenv, n, warmup, secs)).collect()
 }
 
-fn env_u64(var: &str, default: u64) -> u64 {
+pub(super) fn env_u64(var: &str, default: u64) -> u64 {
     std::env::var(var).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
 }
 

@@ -4,7 +4,7 @@
 //! The amxx-testenv roots run the port, which loads `tsmod_*` libraries from `ts/dlls/`, so the
 //! standalone plugin runs there too (its own e2e uses the port's roots, `~/games/hlds_*` /
 //! `xash*`, through the port's `cargo xtask install`; this uses the AMX Mod X roots as they are).
-//! Per root, with `ts/tsmod/rcbot/` backed up whole and restored afterwards:
+//! Per root, with `ts/tsmod/rcbot/` backed up whole (in memory) and restored afterwards:
 //!
 //! 1. The e2e's install (modules, plugin, fixtures: four profiles, chat, bot_config.ini) with
 //!    `config ts_kungfu 1` added (kung fu fights, so the `.rkf` files learn something), and the
@@ -30,7 +30,7 @@
 //! Environment: e2e's, plus `TSMOD_RCBOT_DIR` (default `~/dev/hl/tsmod-rcbot-rs`) and `COMPAT_SECS`.
 
 use super::e2e::{self, Backup, Root};
-use super::{copy_dir, dist, env_path, home, pawn, root, run};
+use super::{dist, env_path, home, pawn, root, run};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime};
@@ -52,29 +52,67 @@ fn learned_files() -> Vec<String> {
     v
 }
 
-/// `ts/tsmod/rcbot/` copied away and put back whatever happens.
-struct DataBackup {
+/// A directory's files and subdirectories held in memory (RCBot's data directory is small), so a
+/// restore doesn't depend on a copy under `target/` that a `cargo clean` may remove mid-run.
+pub(super) struct Snapshot {
     live: PathBuf,
-    saved: PathBuf,
+    dirs: Vec<PathBuf>,
+    files: Vec<(PathBuf, Vec<u8>)>,
 }
 
+impl Snapshot {
+    pub(super) fn take(live: &Path) -> Result<Snapshot, String> {
+        fn walk(base: &Path, dir: &Path, s: &mut Snapshot) -> Result<(), String> {
+            for e in std::fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))? {
+                let p = e.map_err(|e| e.to_string())?.path();
+                let rel = p.strip_prefix(base).unwrap().to_path_buf();
+                if p.is_dir() {
+                    s.dirs.push(rel);
+                    walk(base, &p, s)?;
+                } else {
+                    s.files.push((rel, std::fs::read(&p).map_err(|e| format!("{}: {e}", p.display()))?));
+                }
+            }
+            Ok(())
+        }
+        let mut s = Snapshot { live: live.to_owned(), dirs: Vec::new(), files: Vec::new() };
+        walk(live, live, &mut s)?;
+        Ok(s)
+    }
+
+    /// Replaces the directory with the snapshot.
+    pub(super) fn restore(&self) -> Result<(), String> {
+        let _ = std::fs::remove_dir_all(&self.live);
+        std::fs::create_dir_all(&self.live).map_err(|e| format!("{}: {e}", self.live.display()))?;
+        for d in &self.dirs {
+            std::fs::create_dir_all(self.live.join(d)).map_err(|e| e.to_string())?;
+        }
+        for (rel, bytes) in &self.files {
+            std::fs::write(self.live.join(rel), bytes).map_err(|e| format!("{}: {e}", rel.display()))?;
+        }
+        Ok(())
+    }
+}
+
+/// `ts/tsmod/rcbot/` saved and put back whatever happens.
+pub(super) struct DataBackup(Snapshot);
+
 impl DataBackup {
-    fn take(live: &Path, saved: &Path) -> Result<DataBackup, String> {
-        let _ = std::fs::remove_dir_all(saved);
-        copy_dir(live, saved)?;
-        Ok(DataBackup { live: live.to_owned(), saved: saved.to_owned() })
+    pub(super) fn take(live: &Path) -> Result<DataBackup, String> {
+        Snapshot::take(live).map(DataBackup)
     }
 }
 
 impl Drop for DataBackup {
     fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.live);
-        let _ = copy_dir(&self.saved, &self.live);
+        if let Err(e) = self.0.restore() {
+            eprintln!("warning: restoring {}: {e}", self.0.live.display());
+        }
     }
 }
 
 /// The standalone library in `ts/dlls/` for one run, removed afterwards whatever happens.
-struct Library(PathBuf);
+pub(super) struct Library(pub(super) PathBuf);
 
 impl Drop for Library {
     fn drop(&mut self) {
@@ -83,7 +121,7 @@ impl Drop for Library {
 }
 
 /// tsmod_rcbot as its dist has it, building it when it is missing.
-fn standalone(r: &Root) -> Result<PathBuf, String> {
+pub(super) fn standalone(r: &Root) -> Result<PathBuf, String> {
     let dir = env_path("TSMOD_RCBOT_DIR", home().join("dev/hl/tsmod-rcbot-rs"));
     let file = if r.os == "win" { "tsmod_rcbot.dll" } else { "tsmod_rcbot_i386.so" };
     let lib = dir.join("dist").join(r.target.platform).join("dlls").join(file);
@@ -163,7 +201,7 @@ fn compat_root(r: &Root, testenv: &Path, tsmod: &[PathBuf], secs: u64) -> Result
     let amxx = r.dir.join("ts/addons/amxmodx");
     let data = r.dir.join("ts/tsmod/rcbot");
     let out = root().join("target/compat").join(r.os);
-    let _data_backup = DataBackup::take(&data, &out.join("backup"))?;
+    let _data_backup = DataBackup::take(&data)?;
     let cfg = r.dir.join("ts/server.cfg");
     let plugins = amxx.join("configs/plugins.ini");
     let _backup = Backup::take(&[amxx.join("configs/modules.ini"), plugins.clone(), cfg.clone()]);
@@ -260,14 +298,14 @@ fn compat_root(r: &Root, testenv: &Path, tsmod: &[PathBuf], secs: u64) -> Result
     Ok(fails)
 }
 
-fn copy_fresh_lib(lib: &Path, dlls: &Path) -> Result<(), String> {
+pub(super) fn copy_fresh_lib(lib: &Path, dlls: &Path) -> Result<(), String> {
     let to = dlls.join(lib.file_name().unwrap());
     let _ = std::fs::remove_file(&to);
     std::fs::copy(lib, &to).map(|_| ()).map_err(|e| format!("{} -> {}: {e}", lib.display(), to.display()))
 }
 
 /// plugins.ini without rcbot_amxx (and the other e2e plugins), for the standalone bot's run.
-fn without_plugin(text: &str) -> String {
+pub(super) fn without_plugin(text: &str) -> String {
     e2e::plugins_ini(text, false).lines().filter(|l| !l.starts_with(&format!("{}.amxx", e2e::PLUGIN))).collect::<Vec<_>>().join("\n") + "\n"
 }
 
@@ -306,6 +344,24 @@ mod tests {
         let out = without_plugin("admin.amxx\nrcbot_amxx.amxx debug\n");
         assert!(!out.contains("rcbot_amxx.amxx") || out.lines().all(|l| l.starts_with(';') || !l.contains("rcbot_amxx")));
         assert!(out.contains("admin.amxx"));
+    }
+
+    #[test]
+    fn a_snapshot_puts_the_directory_back() {
+        let dir = root().join("target/xtask-tests/snapshot");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("botprofiles/empty")).unwrap();
+        std::fs::write(dir.join("botprofiles/1.rld"), b"learned").unwrap();
+        std::fs::write(dir.join("bot_weapons.ini"), b"w").unwrap();
+        let s = Snapshot::take(&dir).unwrap();
+        std::fs::remove_file(dir.join("bot_weapons.ini")).unwrap();
+        std::fs::write(dir.join("botprofiles/1.rld"), b"changed").unwrap();
+        std::fs::write(dir.join("new.rhm"), b"x").unwrap();
+        s.restore().unwrap();
+        assert_eq!(std::fs::read(dir.join("botprofiles/1.rld")).unwrap(), b"learned");
+        assert_eq!(std::fs::read(dir.join("bot_weapons.ini")).unwrap(), b"w");
+        assert!(!dir.join("new.rhm").exists() && dir.join("botprofiles/empty").is_dir());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
