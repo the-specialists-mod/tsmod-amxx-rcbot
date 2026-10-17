@@ -75,12 +75,34 @@ impl DataDir {
     }
 }
 
-/// A fresh, empty directory for a test (under the system's temp directory).
-pub fn temp_dir(name: &str) -> PathBuf {
+/// A fresh, empty directory for a test (under the system's temp directory), removed when dropped.
+pub fn temp_dir(name: &str) -> TempDir {
     let d = std::env::temp_dir().join(format!("rcbot-amxx-{name}-{}-{:?}", std::process::id(), std::thread::current().id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
-    d
+    TempDir(d)
+}
+
+/// [`temp_dir`]'s directory: derefs to its path and deletes it on drop.
+pub struct TempDir(PathBuf);
+
+impl std::ops::Deref for TempDir {
+    type Target = std::path::Path;
+    fn deref(&self) -> &std::path::Path {
+        &self.0
+    }
+}
+
+impl AsRef<std::path::Path> for TempDir {
+    fn as_ref(&self) -> &std::path::Path {
+        &self.0
+    }
+}
+
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
 }
 
 #[cfg(test)]
@@ -100,7 +122,8 @@ mod tests {
 
     #[test]
     fn writes_are_atomic_and_make_folders() {
-        let d = DataDir::new(temp_dir("write"));
+        let t = temp_dir("write");
+        let d = DataDir::new(&*t);
         d.write("botprofiles/x.bin", b"one").unwrap();
         d.write("botprofiles/x.bin", b"two").unwrap();
         assert_eq!(d.read("botprofiles/x.bin").as_deref(), Some(&b"two"[..]));

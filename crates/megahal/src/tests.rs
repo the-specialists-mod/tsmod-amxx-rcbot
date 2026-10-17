@@ -9,12 +9,11 @@ use amxx::Cell;
 use amxx::native::FakeArgs;
 use rcbot::chat::HalBot;
 use rcbot_amxx_common::DataDir;
-use rcbot_amxx_common::data_dir::temp_dir;
-use std::path::PathBuf;
+use rcbot_amxx_common::data_dir::{TempDir, temp_dir};
 
-fn setup(name: &str) -> PathBuf {
+fn setup(name: &str) -> TempDir {
     let d = temp_dir(name);
-    state::attach(DataDir::new(&d));
+    state::attach(DataDir::new(&*d));
     with(|s| s.rng = rcbot_amxx_common::ModuleRandom::seeded(42));
     d
 }

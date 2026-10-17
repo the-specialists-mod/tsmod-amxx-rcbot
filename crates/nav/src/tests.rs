@@ -17,10 +17,9 @@ use rcbot::nav::{
     AStar, AStarBot, AStarQuery, Glass, Monsters, SearchOptions, Tactics, Trace, VisibilityTable, Waypoints, World, flags as fl,
 };
 use rcbot::{Vector, XorShiftRandom};
-use rcbot_amxx_common::data_dir::temp_dir;
+use rcbot_amxx_common::data_dir::{TempDir, temp_dir};
 use rcbot_amxx_common::{DataDir, ModuleRandom, float_cell};
 use std::cell::{Cell as StdCell, RefCell};
-use std::path::PathBuf;
 use std::rc::Rc;
 
 /// Walls on planes `x = c`, a clock, entities by index, and a PVS that ends at `x = pvs_end`.
@@ -72,9 +71,9 @@ impl BotWorld for FakeWorld {
     }
 }
 
-fn setup(name: &str, world: FakeWorld) -> (PathBuf, Rc<FakeWorld>) {
+fn setup(name: &str, world: FakeWorld) -> (TempDir, Rc<FakeWorld>) {
     let d = temp_dir(name);
-    state::attach(DataDir::new(&d));
+    state::attach(DataDir::new(&*d));
     with(|s| s.rng = ModuleRandom::seeded(1));
     let w = Rc::new(world);
     set_test_world(Some(w.clone()));

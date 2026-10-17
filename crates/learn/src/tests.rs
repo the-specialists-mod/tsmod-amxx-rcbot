@@ -12,13 +12,12 @@ use amxx::native::FakeArgs;
 use rcbot::learn::data::{BotLearnedData, GlobalLearnedData};
 use rcbot::learn::opponents::OpponentKey;
 use rcbot::learn::perceptron::sigmoid;
-use rcbot_amxx_common::data_dir::temp_dir;
+use rcbot_amxx_common::data_dir::{TempDir, temp_dir};
 use rcbot_amxx_common::{DataDir, float_cell};
-use std::path::PathBuf;
 
-fn setup(name: &str) -> PathBuf {
+fn setup(name: &str) -> TempDir {
     let d = temp_dir(name);
-    state::attach(DataDir::new(&d));
+    state::attach(DataDir::new(&*d));
     with(|s| s.rng = rcbot_amxx_common::ModuleRandom::seeded(1));
     d
 }
