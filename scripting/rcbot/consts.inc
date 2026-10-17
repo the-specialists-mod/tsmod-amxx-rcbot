@@ -230,3 +230,10 @@ enum
 #define DBG_AIM						(1<<6)
 #define DBG_NAV						(1<<7)
 #define DBG_SEE						(1<<8)
+
+// ---- combat (owner: combat; look.inc, combat.inc, fire.inc read these) ----------------------
+
+// nav/mod.rs MAX_JUMP_HEIGHT (bot_const.h).
+#define MAX_JUMP_HEIGHT				45.0
+// fire.rs AIM_RADIUS: the radius the bot treats a player as for "on target" and spread.
+#define AIM_RADIUS					14.0
