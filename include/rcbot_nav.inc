@@ -157,6 +157,13 @@ native nav_find_reachable(const Float:origin[3], const Float:view_ofs[3], ignore
 native bool:nav_reachable(const Float:src[3], const Float:dest[3], bool:dist_check = true);
 
 /**
+ * The engine's PVS test (the host's BotWorld::in_pvs: ENGINE_CHECK_VISIBILITY(viewer,
+ * ENGINE_SET_PVS(origin))): is the entity viewer in the potentially visible set of origin? False
+ * for viewer 0 or a free edict. AMX Mod X 1.10's fakemeta has no EngFunc_SetFatPVS, hence this.
+ */
+native bool:nav_in_pvs(viewer, const Float:origin[3]);
+
+/**
  * The paths out of a waypoint usable by team, in WaypointFindPath order.
  *
  * @return          How many there are (at most len written).

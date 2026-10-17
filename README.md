@@ -90,6 +90,7 @@ RCBot's (rules team - 1, -1 none). Flags are `NAV_FL_*` (`W_FL_*`).
 | `bool:nav_valid(wp)`, `bool:nav_origin(wp, Float:o[3])`, `nav_flags(wp)`, `Float:nav_distance(wp, const Float:from[3])` | a waypoint |
 | `nav_nearest(origin, range, ignore, NAV_NEAREST_* flags, failed[], num)` | `CWaypointLocations::NearestWaypoint` (location buckets) |
 | `nav_nearest_scan`, `nav_nearest_flag`, `nav_random_flag`, `nav_random_flag_near`, `nav_nearest_aiming`, `nav_find_reachable`, `bool:nav_reachable` | `WaypointFindNearest`, `...NearestGoal`, `...RandomGoal` (both), `...NearestAiming`, `...FindReachable`, `WaypointReachable` |
+| `bool:nav_in_pvs(viewer, const Float:origin[3])` | the engine's PVS test (`SET_FAT_PVS` + `CheckVisibility`, `BotWorld::in_pvs`) |
 | `nav_paths_out(wp, out[], len, team)`, `nav_paths_in(wp, out[], len)`, `bool:nav_has_path(from, to, team)` | paths |
 | `nav_cover(player[3], from[3], ignore[], num, team, bool:heatmap)` | `GetCoverWaypoint`, with the heatmap's cover penalty |
 | `nav_buckets_around(origin, out[], len)`, `nav_nearby(origin, out[], len)` | location buckets |

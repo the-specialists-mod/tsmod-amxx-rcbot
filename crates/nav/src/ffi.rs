@@ -29,6 +29,7 @@ amxx::natives! {
         c"nav_nearest_aiming" => n::nav_nearest_aiming,
         c"nav_find_reachable" => n::nav_find_reachable,
         c"nav_reachable" => n::nav_reachable,
+        c"nav_in_pvs" => n::nav_in_pvs,
         c"nav_paths_out" => n::nav_paths_out,
         c"nav_paths_in" => n::nav_paths_in,
         c"nav_has_path" => n::nav_has_path,

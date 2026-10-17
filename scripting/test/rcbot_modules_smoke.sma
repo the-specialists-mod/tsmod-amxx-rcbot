@@ -207,6 +207,7 @@ smoke_nav()
 	nav_nearest_aiming(origin);
 	nav_find_reachable(origin, Float:{0.0, 0.0, 17.0});
 	nav_reachable(origin, there);
+	nav_in_pvs(1, origin);
 	nav_paths_out(a, out, sizeof(out));
 	nav_paths_in(a, out, sizeof(out));
 	nav_has_path(a, b);

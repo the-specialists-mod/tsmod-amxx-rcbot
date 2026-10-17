@@ -23,13 +23,15 @@ use std::cell::{Cell as StdCell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
 
-/// Walls on planes `x = c`, a clock, and entities by index.
+/// Walls on planes `x = c`, a clock, entities by index, and a PVS that ends at `x = pvs_end`.
 #[derive(Default)]
 struct FakeWorld {
     walls: Vec<f32>,
     time: StdCell<f32>,
     entities: RefCell<Vec<Entity>>,
     traces: StdCell<usize>,
+    pvs_end: Option<f32>,
+    pvs_viewer: StdCell<u32>,
 }
 
 impl World for FakeWorld {
@@ -58,8 +60,9 @@ impl BotWorld for FakeWorld {
     fn entity(&self, index: u32) -> Option<Entity> {
         self.entities.borrow().iter().find(|e| e.index == index).cloned()
     }
-    fn in_pvs(&self, _: u32, _: Vector) -> bool {
-        true
+    fn in_pvs(&self, viewer: u32, origin: Vector) -> bool {
+        self.pvs_viewer.set(viewer);
+        self.pvs_end.is_none_or(|x| origin.x < x)
     }
     fn entities_in_sphere(&self, origin: Vector, radius: f32) -> Vec<u32> {
         self.entities.borrow().iter().filter(|e| (e.origin - origin).length() <= radius).map(|e| e.index).collect()
@@ -768,6 +771,26 @@ fn auto_waypointing_walks() {
     world.entities.borrow_mut().clear();
     a.params = vec![3, 0, 0, 1];
     assert_eq!(n::nav_auto_waypoint(&mut a), 0, "no such player");
+}
+
+#[test]
+fn pvs_asks_the_world_for_the_viewer() {
+    let (_, world) = setup("pvs", FakeWorld { pvs_end: Some(500.0), ..FakeWorld::default() });
+    let mut a = FakeArgs::new(&[]);
+    let near = v3(&mut a, 100.0, 0.0, 0.0);
+    let far = v3(&mut a, 900.0, 0.0, 0.0);
+    a.params = vec![3, near];
+    assert_eq!(n::nav_in_pvs(&mut a), 1);
+    assert_eq!(world.pvs_viewer.get(), 3);
+    a.params = vec![4, far];
+    assert_eq!(n::nav_in_pvs(&mut a), 0);
+    assert_eq!(world.pvs_viewer.get(), 4);
+    // No viewer: not visible, and the world isn't asked.
+    for v in [0, -2] {
+        a.params = vec![v, near];
+        assert_eq!(n::nav_in_pvs(&mut a), 0);
+    }
+    assert_eq!(world.pvs_viewer.get(), 4);
 }
 
 #[test]

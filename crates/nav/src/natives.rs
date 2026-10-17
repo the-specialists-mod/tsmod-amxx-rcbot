@@ -254,6 +254,15 @@ pub fn nav_reachable(a: &mut dyn Args) -> Cell {
     with_world(|w| Waypoints::reachable(src, dest, check, w)) as Cell
 }
 
+/// `bool:nav_in_pvs(viewer, const Float:origin[3])`: `BotWorld::in_pvs`, the host's
+/// `ENGINE_CHECK_VISIBILITY(viewer, ENGINE_SET_PVS(origin))` (`crates/host/src/api.rs` `in_pvs`):
+/// is the entity `viewer` in the potentially visible set of `origin`? False for no viewer (0 or
+/// less) or a free edict; true without the engine table (nothing to test against, as the host).
+pub fn nav_in_pvs(a: &mut dyn Args) -> Cell {
+    let (viewer, origin) = (entity_arg(a, 1), vec3(a, 2));
+    viewer.is_some_and(|v| with_world(|w| w.in_pvs(v, origin))) as Cell
+}
+
 /// `nav_paths_out(waypoint, out[], len, team = -1)`: successors in `WaypointFindPath` order.
 pub fn nav_paths_out(a: &mut dyn Args) -> Cell {
     let (w, max, team) = (waypoint_arg(a, 1), size(a, 3), a.cell(4));
