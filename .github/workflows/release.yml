@@ -52,6 +52,19 @@ jobs:
           tar -xzf amxmodx.tar.gz -C amxmodx
           ls "$AMXX_SCRIPTING/amxxpc"
 
+      # tsmod-amxx-rs v0.3.0's includes for scripting/rcbot_amxx.sma (tsbot.inc, and the TS 3.0
+      # tsconst.inc / tsfun.inc that must win over AMX Mod X's): the release's Linux zip.
+      - name: tsmod-amxx-rs includes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download v0.3.0 -R the-specialists-mod/tsmod-amxx-rs -p 'tsmod-amxx-rs-v0.3.0-linux-i686.zip' -D tsmod-amxx-rs
+          unzip -q tsmod-amxx-rs/tsmod-amxx-rs-v0.3.0-linux-i686.zip -d tsmod-amxx-rs/zip
+          inc=$(dirname "$(find tsmod-amxx-rs/zip -name tsbot.inc | head -1)")
+          test -f "$inc/tsbot.inc"
+          echo "TSMOD_AMXX_INCLUDE=$GITHUB_WORKSPACE/$inc" >> "$GITHUB_ENV"
+
       - uses: Swatinem/rust-cache@v2
 
       - name: Unit tests and the Pawn compile check

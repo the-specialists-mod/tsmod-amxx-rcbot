@@ -6,15 +6,21 @@
 //!                            unless --debug-info), with AMX Mod X's file names
 //! lint                       cargo fmt --check, clippy -D warnings on both targets
 //! test                       unit tests on the host and on i686 Linux, then the Pawn compile check (pawn)
-//! pawn                       compiles scripting/**/*.sma with amxxpc against include/ (into target/pawn/)
-//! e2e                        not yet: see AGENTS.md
+//! pawn                       compiles scripting/**/*.sma with amxxpc against include/, tsmod-amxx-rs's include/
+//!                            (tsbot.inc, tsconst.inc, tsfun.inc) and AMX Mod X's (into target/pawn/)
+//! e2e [linux] [win]          dist, the Pawn plugins, tsx/tsfun from tsmod-amxx-rs, then rcbot_amxx on the
+//!                            amxx-testenv roots (ts_dojo, 4 bots) and its CHECK lines (default: linux); e2e.rs
 //! ```
 //!
 //! Environment: `FWGS_DIR` (FWGS headers, default: `xash3d-fwgs` next to the checkout or one of its
 //! ancestors, so git worktrees under `.claude/worktrees/` find it too; an `FWGS_DIR` without the
 //! headers is ignored), `AMXX_SCRIPTING` (amxxpc's directory, default
 //! `~/dev/hl/ref/extracted/amxmodx-1.10.0-git5487-linux/addons/amxmodx/scripting`; `pawn` and
-//! `test` skip the compile check with a note when it is missing).
+//! `test` skip the compile check with a note when it is missing), `TSMOD_AMXX_INCLUDE` (tsmod-amxx-rs's
+//! include directory with tsbot.inc, default `~/dev/hl/tsmod-amxx-rs/include`; CI unpacks its v0.3.0
+//! release there). e2e's own variables are in e2e.rs.
+
+mod e2e;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -191,6 +197,12 @@ fn lint() -> Result<(), String> {
     Ok(())
 }
 
+/// tsmod-amxx-rs's includes (tsbot.inc and its TS 3.0 tsconst.inc / tsfun.inc), searched after
+/// include/ and before AMX Mod X's own (whose tsconst.inc has TS 2's weapon ids).
+fn tsmod_amxx_include() -> PathBuf {
+    env_path("TSMOD_AMXX_INCLUDE", home().join("dev/hl/tsmod-amxx-rs/include"))
+}
+
 fn scripting_dir() -> PathBuf {
     env_path("AMXX_SCRIPTING", home().join("dev/hl/ref/extracted/amxmodx-1.10.0-git5487-linux/addons/amxmodx/scripting"))
 }
@@ -209,7 +221,7 @@ fn sources(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-/// Compiles `sma` with amxxpc, `include/` first, into `out`.
+/// Compiles `sma` with amxxpc into `out`: `include/` first, then tsmod-amxx-rs's, then AMX Mod X's.
 fn compile_plugin(scripting: &Path, sma: &Path, out: &Path) -> Result<(), String> {
     std::fs::create_dir_all(out.parent().unwrap()).map_err(|e| e.to_string())?;
     // AMX Mod X 1.8.2's amxxpc exits 0 after errors: only a fresh output file means success.
@@ -218,6 +230,7 @@ fn compile_plugin(scripting: &Path, sma: &Path, out: &Path) -> Result<(), String
     c.env("LD_LIBRARY_PATH", scripting)
         .arg(sma)
         .arg(format!("-i{}", root().join("include").display()))
+        .arg(format!("-i{}", tsmod_amxx_include().display()))
         .arg(format!("-i{}", scripting.join("include").display()))
         .arg(format!("-o{}", out.display()));
     // amxxpc writes scratch files into the current directory.
@@ -237,6 +250,17 @@ fn pawn(required: bool) -> Result<bool, String> {
     let scripting = scripting_dir();
     if !scripting.join("amxxpc").is_file() {
         let msg = format!("no amxxpc in {} (set AMXX_SCRIPTING)", scripting.display());
+        if required {
+            return Err(msg);
+        }
+        eprintln!("note: {msg}; skipping the Pawn compile check");
+        return Ok(false);
+    }
+    if !tsmod_amxx_include().join("tsbot.inc").is_file() {
+        let msg = format!(
+            "no tsbot.inc in {} (set TSMOD_AMXX_INCLUDE to tsmod-amxx-rs v0.3.0's include directory)",
+            tsmod_amxx_include().display()
+        );
         if required {
             return Err(msg);
         }
@@ -268,10 +292,8 @@ fn main() -> ExitCode {
         Some("lint") => lint(),
         Some("test") => test(),
         Some("pawn") => pawn(true).map(|_| ()),
-        // TODO: end-to-end on the amxx-testenv roots (../ref/amxx-testenv), as tsmod-amxx-rs's
-        // xtask does, once the Pawn bot plugin (scripting/rcbot_amxx.sma) exists.
-        Some("e2e") => Err("e2e is not implemented yet (see AGENTS.md)".into()),
-        _ => Err("usage: cargo xtask <build [--release] | dist [--debug-info] | lint | test | pawn | e2e>".into()),
+        Some("e2e") => e2e::e2e(&args[1..]),
+        _ => Err("usage: cargo xtask <build [--release] | dist [--debug-info] | lint | test | pawn | e2e [linux] [win]>".into()),
     };
     match r {
         Ok(()) => ExitCode::SUCCESS,
