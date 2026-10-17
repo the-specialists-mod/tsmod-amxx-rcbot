@@ -91,6 +91,7 @@ public plugin_init()
 public plugin_precache()
 {
 	navigate_precache();
+	clients_precache();
 }
 
 public plugin_cfg()
@@ -157,13 +158,13 @@ public ts_player_spawned(id)
 
 public ts_damage(victim, attacker, inflictor, Float:damage, bits, Float:health, Float:armor, hitgroup, wid, Float:dir[3], Float:pos[3])
 {
-	#pragma unused inflictor, bits, health, armor, pos
+	#pragma unused bits, health, armor, pos
 	// lib.rs damage: the world's and self-inflicted damage stop here.
 	if (attacker <= 0 || attacker == victim || victim <= 0)
 	{
 		return;
 	}
-	manager_damage(victim, attacker, damage, hitgroup, wid, dir);
+	manager_damage(victim, attacker, inflictor, damage, hitgroup, wid, dir);
 }
 
 public ts_sound(ent, Float:origin[3], const sample[], Float:vol, Float:attn, channel, source_player)

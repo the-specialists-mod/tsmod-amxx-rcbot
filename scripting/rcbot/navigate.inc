@@ -1039,7 +1039,7 @@ static stock nv_player_waypoint(index, &team)
 }
 
 // manager.rs update_heatmap for a damage (the port's damage event): at the victim's waypoint.
-// Core calls it from manager_damage.
+// learning_damage_event calls it.
 stock navigate_heatmap_damage(victim, Float:amount)
 {
 	if (nav_count() == 0)
@@ -1055,7 +1055,7 @@ stock navigate_heatmap_damage(victim, Float:amount)
 }
 
 // manager.rs update_heatmap for a kill: a death at the victim's waypoint, a kill at the
-// killer's (not the world's, not a suicide). Core calls it from manager_death.
+// killer's (not the world's, not a suicide). learning_player_killed calls it.
 stock navigate_heatmap_kill(victim, killer)
 {
 	if (nav_count() == 0)

@@ -216,12 +216,11 @@ static stock Float:mv_avoid_angle(id, const Float:origin[3])
 }
 
 // movement.rs Bot::speed_limit: m_fIdealMoveSpeed, at most half the maximum at a stay-near
-// waypoint (or in a stealthy squad: needs squad.inc's squad_is_stealth, requested from social;
-// until then only the waypoint slows the bot).
+// waypoint or in a stealthy squad.
 static stock Float:mv_speed_limit(id)
 {
 	new Float:ideal = g_mv_f[id][MV_IDEAL_MOVE_SPEED];
-	if (g_nv_i[id][NV_CURRENT_WPT_FLAGS] & NAV_FL_STAY_NEAR)
+	if (g_nv_i[id][NV_CURRENT_WPT_FLAGS] & NAV_FL_STAY_NEAR || squad_is_stealth(id))
 	{
 		return fmin(ideal, g_mv_f[id][MV_MAX_SPEED] / 2.0);
 	}

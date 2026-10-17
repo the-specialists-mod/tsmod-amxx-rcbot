@@ -212,12 +212,28 @@ static stock ln_record(id, Float:now, other, weapon, Float:dealt, Float:taken, b
 	rl_ledger_record(RcLearn:h, now, other, weapon, dealt, taken, kill, death, dist, g_nv_i[id][NV_CURRENT_WPT]);
 }
 
+// learning.rs Bot::blow_weapon: a grenade (24) or another projectile (-1) when something other
+// than the attacker dealt the blow, else the attacker's weapon in hand.
+static stock ln_blow_weapon(attacker, inflictor)
+{
+	if (inflictor > 0 && inflictor != attacker)
+	{
+		if (!pev_valid(inflictor))
+		{
+			return -1;
+		}
+		new cls[32];
+		pev(inflictor, pev_classname, cls, charsmax(cls));
+		return contain(cls, "grenade") != -1 ? 24 : -1;
+	}
+	return attacker >= 1 && attacker <= MAX_PLAYERS ? world_weapon(attacker) : -1;
+}
+
 // manager.rs combat_event for a damage (attacker another player, as ts_damage passes it on):
 // update_heatmap, update_opponents (rl_opp_hit_on_bot), every bot's Bot::combat_event (the
 // ledger, the life's damage, the weapon table). wid is the rules' weapon (24 a grenade, -1 other):
-// without it, Bot::blow_weapon's guess is the attacker's weapon in hand (tsx doesn't pass the
-// inflictor here, so a non-grenade projectile counts as that too).
-stock learning_damage_event(victim, attacker, Float:damage, hitgroup, wid)
+// without it, Bot::blow_weapon's guess from the inflictor.
+stock learning_damage_event(victim, attacker, inflictor, Float:damage, hitgroup, wid)
 {
 	if (victim >= 1 && victim <= MAX_PLAYERS)
 	{
@@ -228,8 +244,7 @@ stock learning_damage_event(victim, attacker, Float:damage, hitgroup, wid)
 	learning_refresh_player_keys();
 	navigate_heatmap_damage(victim, damage);
 	new kind, kid;
-	new bool:attacker_player = attacker >= 1 && attacker <= MAX_PLAYERS;
-	new weapon = wid >= 0 ? wid : (attacker_player ? world_weapon(attacker) : -1);
+	new weapon = wid >= 0 ? wid : ln_blow_weapon(attacker, inflictor);
 	if (learning_player_key(attacker, kind, kid) && attacker != victim && ln_is_bot(victim))
 	{
 		new Float:a[3], Float:v[3];

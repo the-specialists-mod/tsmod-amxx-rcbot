@@ -214,7 +214,7 @@ to the front drops the last task instead (the Rust queue is unbounded).
 | combat.rs Bot::clear_enemy_costs | `combat.inc` `combat_clear_enemy_costs` | ported |
 | events.rs Bot::rep_of (Option: client.inc's rep id, the profile's reps) | `combat.inc` `combat_rep_of` | ported |
 | combat.rs Bot::find_enemy (FindEnemy rewritten: threat scores, 25% to switch) | `combat.inc` `combat_find_enemy` | ported |
-| combat.rs Bot::enemy_found | `combat.inc` `combat_enemy_found` | partial: the bot camera hand-off (BotCam::set_current_bot) waits for a botcam.inc stock |
+| combat.rs Bot::enemy_found | `combat.inc` `combat_enemy_found` | ported |
 | combat.rs Bot::enemy_down | `combat.inc` `combat_enemy_down` | ported |
 | combat.rs Bot::decide_jump_duck_strafe (rl_bot_decide) | `combat.inc` `combat_decide_jump_duck_strafe` | ported |
 | combat.rs Bot::want_to_follow_enemy | `combat.inc` `combat_want_to_follow_enemy` | ported |
@@ -342,7 +342,7 @@ to the front drops the last task instead (the Rust queue is unbounded).
 | think.rs Bot::spawn_init, movement's part. | `movement.inc` `movement_spawn_init` | ported |
 | mod.rs Bot::distance_from (DistanceFrom, from the gun position) | `movement.inc` `movement_distance_from` | ported |
 | Entity::size for the bot (snapshot absmax - absmin) | `movement.inc` `movement_size` | ported |
-| movement.rs Bot::work_move_direction (+ avoid_angle, speed_limit) | `movement.inc` `movement_work_move_direction` | partial: the stealthy squad's half speed needs squad.inc's `squad_is_stealth` (requested); the stay-near half speed is in |
+| movement.rs Bot::work_move_direction (+ avoid_angle, speed_limit) | `movement.inc` `movement_work_move_direction` | ported |
 | movement.rs Bot::check_stuck (+ react_to_stuck, give_up_stuck) | `movement.inc` `movement_check_stuck` | ported |
 | movement.rs Bot::stunt_ready (TSPS_STANCE, TSPF_STUNTING, TSCOMBAT_NEXT_STUNT) | `movement.inc` `movement_stunt_ready` | ported |
 | movement.rs Bot::dive (TS's +alt1 stunt on its own) | `movement.inc` `movement_dive` | ported |
@@ -477,7 +477,7 @@ to the front drops the last task instead (the Rust queue is unbounded).
 | think.rs spawn_init (learned.on_spawn) | `learning.inc` `learning_on_spawn` | ported |
 | learning.rs Bot::learn_think, credit_loadout | `learning.inc` `learning_think` | ported |
 | learning.rs Bot::choose_loadout (the bandit's pick, rl_loadout_choose) | `learning.inc` `learning_choose_loadout` | ported |
-| manager.rs combat_event for a damage (update_heatmap, update_opponents, Bot::combat_event, blow_weapon) | `learning.inc` `learning_damage_event` | partial: no inflictor, so blow_weapon's non-grenade projectile (-1) counts as the attacker's weapon |
+| manager.rs combat_event for a damage (update_heatmap, update_opponents, Bot::combat_event, blow_weapon) | `learning.inc` `learning_damage_event` | ported |
 | manager.rs combat_event for a kill (KillEvent) | `learning.inc` `learning_kill_event` | ported |
 | the port's kill_scored from ts_player_killed and the victim's last ts_damage | `learning.inc` `learning_player_killed` | ported |
 | manager.rs refresh_player_keys (PlayerKeys::refresh, rl_opp_set_key on changes) | `learning.inc` `learning_refresh_player_keys`, `learning_player_key` | ported |

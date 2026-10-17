@@ -3,7 +3,7 @@
 // RCBot by Paul "Cheeseh" Murphy; tsmod-amxx-rcbot, GPL-3.0-or-later with the AMX Mod X and RCBot
 // linking exceptions.
 //
-// Status: ported, but enemy_found's bot camera hand-off waits for botcam.inc (TODO(botcam)).
+// Status: ported.
 // flee_grenades uses think.inc's think_is_grenade_rocket and think_trace_toss (think.inc comes
 // after this file; Pawn functions may be called before their definition).
 //
@@ -713,20 +713,7 @@ stock combat_clear_enemy_costs(id)
 // then the profile's reputations). Read here as the enemy's priority.
 stock bool:combat_rep_of(id, player, &rep)
 {
-	new rep_id = g_client_rep_id[player];
-	if (rep_id == NO_CLIENT)
-	{
-		return false;
-	}
-	for (new k = 0; k < g_rep_count[id]; k++)
-	{
-		if (g_rep_id[id][k] == rep_id)
-		{
-			rep = g_rep_value[id][k];
-			return true;
-		}
-	}
-	return false;
+	return rep_lookup(id, player, rep);
 }
 
 // combat.rs Bot::find_enemy (CBot::FindEnemy, TS, rewritten: design §4): every 0.4-0.6 s the
@@ -836,8 +823,7 @@ stock combat_enemy_found(id, ent)
 	remember_add(id, o, ent, serial, CB_REMEMBER_1ST_SEE_ENEMY, me);
 	// investigate_sound_time (think's field) is set here in combat.rs.
 	g_th_f[id][TH_INVESTIGATE_SOUND_TIME] = now + 2.0;
-	// TODO(botcam): BotHasEnemy: unless the camera's current bot is this one or another has an
-	// enemy, BotCam::set_current_bot(id) (botcam.inc has no stock for it yet).
+	botcam_enemy_found(id);
 }
 
 // combat.rs Bot::enemy_down (CBot::EnemyDown): upstream removes the enemy's remembered position,

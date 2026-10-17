@@ -121,6 +121,7 @@ stock backend_copy_profile(from, to)
 	for (new Pr_I:k; k < Pr_I; k++) g_pr_i[to][k] = g_pr_i[from][k];
 	for (new Pr_F:k; k < Pr_F; k++) g_pr_f[to][k] = g_pr_f[from][k];
 	copy(g_pr_model[to], charsmax(g_pr_model[]), g_pr_model[from]);
+	for (new k = 0; k < PR_HAL_FILES; k++) copy(g_pr_hal_file[to][k], charsmax(g_pr_hal_file[][]), g_pr_hal_file[from][k]);
 }
 
 // bots.rs new_bot: the rest of BotFunc_ReadProfile and setupDataStructures: the HAL brain, the
