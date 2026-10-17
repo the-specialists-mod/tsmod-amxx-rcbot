@@ -25,9 +25,9 @@ and plugin authors can change the bot's behaviour in Pawn:
     A* danger source, so it lives here rather than in `rcbot_learn`), the editor and
     auto-waypointer (`rcbot::nav::editor` over an engine-backed `BotWorld`, `src/world.rs`). Also
     a metamod plugin, for the engine table (traces, point contents, entities) and `StartFrame`
-    (missing visibility rows, traced a few per frame). Done, not run on a server yet.
+    (missing visibility rows, traced a few per frame). Done.
 * **The bot logic as a Pawn plugin**, `scripting/rcbot_amxx.sma` + `scripting/rcbot/*.inc`
-  (one file per Rust module; skeleton in place, subsystems being ported): think, tasks,
+  (one file per Rust module, all ported; docs/design.md lists each function): think, tasks,
   combat, kung fu, squads, chat decisions; it registers with the port as bot backend
   `rcbot_amxx` (`ts_bot_backend rcbot_amxx`) through tsx's `tsbot.inc` (tsmod-amxx-rs v0.3.0).
   It calls the modules' natives where the Rust bot calls `rcbot::chat` / `rcbot::learn` /

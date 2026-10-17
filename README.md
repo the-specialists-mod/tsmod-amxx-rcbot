@@ -18,9 +18,9 @@ learned file or waypoint file written by one is read by the other.
 | Workspace, licences, xtask (build, dist, lint, test, pawn), release workflow | done |
 | `rcbot_megahal`: MegaHAL brains (`botprofiles/<id>_hal.brn`, keyword lists, pretraining), `bot_chat.ini` lines filled from a plugin-supplied context, BotChatReply, typos | done |
 | `rcbot_learn`: global learned files, per-bot learned data (`.rld`/`.rwr`/`.rlo`), spawn/death breeding, decision perceptrons, weapons by range, loadout bandit, opponent model, combat ledger, generic GA/perceptron/NN/SOM | done |
-| `rcbot_nav`: waypoints (`.rcw`), visibility (`.rcv`, missing rows traced over frames), queries (nearest, goals, cover, paths, buckets), per-bot incremental A* with tactics, the heatmap (`.rhm`), editor operations, auto-waypointing and draw data | done (no server run yet) |
-| `scripting/rcbot_amxx.sma`: the bot logic in Pawn, backend `rcbot_amxx` | skeleton: backend, frame loop, state, every subsystem's stubs, placeholder behaviour ([docs/pawn.md](docs/pawn.md), [docs/design.md](docs/design.md)) |
-| End-to-end tests on the amxx-testenv roots (`cargo xtask e2e`) | written, not run yet |
+| `rcbot_nav`: waypoints (`.rcw`), visibility (`.rcv`, missing rows traced over frames), queries (nearest, goals, cover, paths, buckets), per-bot incremental A* with tactics, the heatmap (`.rhm`), editor operations, auto-waypointing and draw data | done |
+| `scripting/rcbot_amxx.sma`: the bot logic in Pawn, backend `rcbot_amxx` | done: every `bot`, `config` and `weapons` function of tsmod-rcbot-rs ported, incl. the kung fu fighter and its `.rkf` ([docs/pawn.md](docs/pawn.md), [docs/design.md](docs/design.md)) |
+| End-to-end tests on the amxx-testenv roots (`cargo xtask e2e`, `compat` with the standalone tsmod_rcbot, `perf`) | pass on Linux and Windows (ReHLDS + AMX Mod X 1.10) |
 
 ## Install
 
