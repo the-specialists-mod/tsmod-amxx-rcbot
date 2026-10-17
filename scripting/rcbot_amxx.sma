@@ -89,6 +89,11 @@ public plugin_init()
 	register_clcmd("say_team", "on_say_team");
 }
 
+public plugin_precache()
+{
+	navigate_precache();
+}
+
 public plugin_cfg()
 {
 	// bot_config.ini runs as rcbot commands, after the configs set cvars (rcbot_e2e).
@@ -118,6 +123,7 @@ public client_putinserver(id)
 
 public client_disconnected(id)
 {
+	navigate_editor_player_left(id);
 	backend_disconnect(id);
 }
 

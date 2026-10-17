@@ -300,13 +300,15 @@ Generated from the stubs' comments when the skeleton was made; owners keep their
 | think.rs Bot::teleported, movement's part | `movement.inc` `movement_teleported` | ported |
 |  | `movement.inc` `movement_reset_unstick` | ported |
 | think.rs Bot::spawn_init, movement's part. | `movement.inc` `movement_spawn_init` | ported |
-| movement.rs Bot::work_move_direction (move_to → move/strafe speeds, avoidance, ladders, water). | `movement.inc` `movement_work_move_direction` | stub |
-| movement.rs Bot::check_stuck (+ react_to_stuck, give_up_stuck). | `movement.inc` `movement_check_stuck` | stub |
-| movement.rs Bot::stunt_ready. | `movement.inc` `movement_stunt_ready` | stub |
-| movement.rs Bot::dive (TS's +alt1 stunt on its own). | `movement.inc` `movement_dive` | stub |
-| movement.rs Bot::dive_landing. | `movement.inc` `movement_dive_landing` | stub |
+| mod.rs Bot::distance_from (DistanceFrom, from the gun position) | `movement.inc` `movement_distance_from` | ported |
+| Entity::size for the bot (snapshot absmax - absmin) | `movement.inc` `movement_size` | ported |
+| movement.rs Bot::work_move_direction (+ avoid_angle, speed_limit) | `movement.inc` `movement_work_move_direction` | partial: the stealthy squad's half speed needs squad.inc's `squad_is_stealth` (requested); the stay-near half speed is in |
+| movement.rs Bot::check_stuck (+ react_to_stuck, give_up_stuck) | `movement.inc` `movement_check_stuck` | ported |
+| movement.rs Bot::stunt_ready (TSPS_STANCE, TSPF_STUNTING, TSCOMBAT_NEXT_STUNT) | `movement.inc` `movement_stunt_ready` | ported |
+| movement.rs Bot::dive (TS's +alt1 stunt on its own) | `movement.inc` `movement_dive` | ported |
+| movement.rs Bot::dive_landing (TSPF_PRONE, TSCOMBAT_PRONE_LOCK) | `movement.inc` `movement_dive_landing` | ported |
 | mod.rs Bot::climb_type (GetClimbType, TS's cases). | `movement.inc` `movement_climb_type` | ported |
-| mod.rs Bot::ladder_dir (1 up, -1 down, 0 stay). | `movement.inc` `movement_ladder_dir` | stub |
+| mod.rs Bot::ladder_dir (1 up, -1 down, 0 stay) | `movement.inc` `movement_ladder_dir` | ported |
 
 ### navigate.inc
 
@@ -315,82 +317,95 @@ Generated from the stubs' comments when the skeleton was made; owners keep their
 | mod.rs Bot::new's AStar / AStarBot / Explore | `navigate.inc` `navigate_bot_init` | ported |
 | The bot left | `navigate.inc` `navigate_bot_free` | ported |
 | think.rs Bot::teleported, navigation's part | `navigate.inc` `navigate_teleported` | ported |
-| think.rs Bot::spawn_init, navigation's part (paths.bot_paths cleared, next_clear_failed_goals 0). spawn_ini... | `navigate.inc` `navigate_spawn_init` | partial |
+| think.rs Bot::spawn_init, navigation's part (next_clear_failed_goals 0: the failed goals cleared, as the next think would) | `navigate.inc` `navigate_spawn_init` | ported |
 | mod.rs Bot::next_waypoint (GetNextWaypoint) | `navigate.inc` `navigate_next_waypoint` | ported |
-| host commands.rs load_waypoints (nav_load("")) and bots.rs load_heatmap (nav_heatmap_load | `navigate.inc` `navigate_load_map` | stub |
-| bots.rs save_globals' heatmap (nav_heatmap_save). From plugin_end. | `navigate.inc` `navigate_save_map` | stub |
-| host editor.rs frame (nav_auto_waypoint / nav_draw_around for editing players, sending nav_event_pop's beam... | `navigate.inc` `navigate_editor_frame` | stub |
-| think.rs Think's failed-goal upkeep (nav_path_think), each think. | `navigate.inc` `navigate_think` | stub |
-| navigate.rs Bot::update_waypoint (touch by flag distance, nav_path_touch, next waypoint, special waypoints,... | `navigate.inc` `navigate_update_waypoint` | stub |
-| navigate.rs Bot::find_next_waypoint (nav_path_pop / nav_path_next). | `navigate.inc` `navigate_find_next_waypoint` | stub |
-| navigate.rs Bot::nearest_waypoint (nav_nearest with the failed goals). | `navigate.inc` `navigate_nearest_waypoint` | stub |
-| navigate.rs Bot::roam_goal (nav_path_roam_goal with the team's claims). | `navigate.inc` `navigate_roam_goal` | stub |
-| navigate.rs Bot::claim_factor. | `navigate.inc` `navigate_claim_factor` | stub |
-| navigate.rs Bot::search_path and think.rs task_find_path | `navigate.inc` `navigate_search_path` | stub |
-| navigate.rs Bot::threat_waypoints → nav_path_set_threats / nav_path_add_threat. | `navigate.inc` `navigate_update_threats` | stub |
-| navigate.rs Bot::crowded_waypoints → nav_path_crowd_from (teammates' paths). | `navigate.inc` `navigate_update_crowding` | stub |
-| navigate.rs Bot::claim (board.inc claims). | `navigate.inc` `navigate_claim` | stub |
-| navigate.rs Bot::share_with_team (board.inc posts | `navigate.inc` `navigate_share_with_team` | stub |
-| navigate.rs Bot::search_move. | `navigate.inc` `navigate_search_move` | stub |
-| navigate.rs Bot::fail_path (nav_path_fail). | `navigate.inc` `navigate_fail_path` | stub |
-| navigate.rs Bot::scan_fov. | `navigate.inc` `navigate_scan_fov` | stub |
-| navigate.rs Bot::wall_on_side. | `navigate.inc` `navigate_wall_on_side` | stub |
-| navigate.rs Bot::got_stuck. | `navigate.inc` `navigate_got_stuck` | stub |
-| mod.rs Bot::go_to_waypoint (util bot_goto | `navigate.inc` `navigate_go_to_waypoint` | stub |
-| manager.rs player_waypoint / update_heatmap | `navigate.inc` `navigate_heatmap_damage` | stub |
-|  | `navigate.inc` `navigate_heatmap_kill` | ported |
+| host lib.rs map precache (m_iWaypointTexture, sprites/lgtning.spr) | `navigate.inc` `navigate_precache` | ported (core calls it from plugin_precache) |
+| host commands.rs load_waypoints (nav_load) and bots.rs load_heatmap (nav_heatmap_load). From plugin_cfg. | `navigate.inc` `navigate_load_map` | ported |
+| bots.rs save_globals' heatmap (nav_heatmap_save). From plugin_end. | `navigate.inc` `navigate_save_map` | ported |
+| host editor.rs frame (nav_draw_around once a second, nav_auto_waypoint / nav_auto_reset) | `navigate.inc` `navigate_editor_frame` | ported |
+| host editor.rs send (TE_BEAMPOINTS, play, console message) | `navigate.inc` `navigate_send_events` | ported |
+| config/client.rs Client waypoint_on / waypoint_paths_on / auto_waypoint / debug_auto_waypoint / current_waypoint | `navigate.inc` `navigate_editor_set`, `navigate_editor_current_waypoint`, `navigate_editor_player_left` | ported (commands.inc sets them) |
+| think.rs Think's failed-goal upkeep (nav_path_think), each think. | `navigate.inc` `navigate_think` | ported |
+| navigate.rs Bot::update_waypoint (touch distance by flags, ladders, human towers, walking past, 2 s unseen give-up, goal reached, jump/crouch-jump/stunt waypoints, bots wait for bots) | `navigate.inc` `navigate_update_waypoint` | ported |
+| navigate.rs Bot::find_next_waypoint (nav_path_pop / nav_path_next, missed waypoints) | `navigate.inc` `navigate_find_next_waypoint` | ported |
+| navigate.rs Bot::nearest_waypoint (ignore, visible, unreachable, is_bot) | `navigate.inc` `navigate_nearest_waypoint` | ported |
+| navigate.rs Bot::roam_goal (nav_path_roam_goal with the team's claims) | `navigate.inc` `navigate_roam_goal` | ported |
+| navigate.rs Bot::claim_factor | `navigate.inc` `navigate_claim_factor` | ported |
+| navigate.rs Bot::search_path (+ think.rs push_current_on_path on a found path) | `navigate.inc` `navigate_search_path` | ported |
+| navigate.rs Bot::threat_waypoints → nav_path_add_threat | `navigate.inc` `navigate_update_threats` | ported |
+| navigate.rs Bot::crowded_waypoints → nav_path_crowd_from (teammates' live paths, not the posted copies) | `navigate.inc` `navigate_update_crowding` | ported |
+| navigate.rs Bot::claim (board.inc claims) | `navigate.inc` `navigate_claim` | ported |
+| navigate.rs Bot::share_with_team (board.inc posts) | `navigate.inc` `navigate_share_with_team` | ported |
+| navigate.rs Bot::search_move | `navigate.inc` `navigate_search_move` | ported |
+| navigate.rs Bot::fail_path (nav_path_fail) | `navigate.inc` `navigate_fail_path` | ported |
+| navigate.rs Bot::scan_fov | `navigate.inc` `navigate_scan_fov` | ported |
+| navigate.rs Bot::wall_on_side | `navigate.inc` `navigate_wall_on_side` | ported |
+| navigate.rs Bot::got_stuck | `navigate.inc` `navigate_got_stuck` | ported |
+| mod.rs Bot::go_to_waypoint (util bot_goto: flush, FIND_PATH -2) | `navigate.inc` `navigate_go_to_waypoint` | ported |
+| manager.rs player_waypoint / update_heatmap (damage) | `navigate.inc` `navigate_heatmap_damage` | ported (core calls it from manager_damage) |
+| manager.rs player_waypoint / update_heatmap (kill) | `navigate.inc` `navigate_heatmap_kill` | ported (core calls it from manager_death) |
 
 ### remember.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| RememberPositions::default (a new bot). | `remember.inc` `remember_bot_init` | stub |
-| RememberPositions::forget (manager.rs death | `remember.inc` `remember_forget` | stub |
-| RememberPositions::add (replaces by entity, keeps 8). | `remember.inc` `remember_add` | stub |
-| RememberPositions::tick. | `remember.inc` `remember_tick` | stub |
-| RememberPositions::hunted. | `remember.inc` `remember_hunted` | stub |
-| RememberPositions::newest | `remember.inc` `remember_newest` | stub |
-| RememberPositions::nearest | `remember.inc` `remember_nearest` | stub |
-| RememberPositions::clear. | `remember.inc` `remember_clear` | stub |
+| RememberPositions::default (a new bot). | `remember.inc` `remember_bot_init` | ported |
+| RememberPositions::forget (manager.rs death) | `remember.inc` `remember_forget` | ported |
+| RememberPositions::add (replaces by entity / place, keeps 8). | `remember.inc` `remember_add` | ported |
+| RememberPositions::tick. | `remember.inc` `remember_tick` | ported |
+| RememberPositions::hunted. | `remember.inc` `remember_hunted` | ported |
+| RememberPositions::any | `remember.inc` `remember_any` | ported |
+| RememberPositions::newest | `remember.inc` `remember_newest` | ported |
+| RememberPositions::nearest | `remember.inc` `remember_nearest` | ported |
+| RememberPositions::clear. | `remember.inc` `remember_clear` | ported |
 
 ### hearing.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| hearing.rs Hearing::default (a new bot). | `hearing.inc` `hearing_bot_init` | stub |
-| events.rs SoundKind::of_sample filtered by is_heard | `hearing.inc` `hearing_sound_kind` | stub |
-| events.rs Bot::hear_sound. | `hearing.inc` `hearing_hear_sound` | stub |
-| think.rs Bot::hear_gunfire (the port's weapon_fired). | `hearing.inc` `hearing_hear_gunfire` | stub |
-| hearing.rs Hearing::add (merges a sound within SAME_SOUND). | `hearing.inc` `hearing_add` | stub |
-| hearing.rs Hearing::tick (drops sounds older than HEARD_FOR). | `hearing.inc` `hearing_tick` | stub |
-| hearing.rs Hearing::investigate. | `hearing.inc` `hearing_investigate` | stub |
-| hearing.rs Hearing::newest_new | `hearing.inc` `hearing_newest_new` | stub |
+| hearing.rs Hearing::default (a new bot). | `hearing.inc` `hearing_bot_init` | ported |
+| events.rs SoundKind::of_sample filtered by is_heard | `hearing.inc` `hearing_sound_kind` | ported |
+| events.rs Bot::hear_sound. | `hearing.inc` `hearing_hear_sound` | ported |
+| think.rs Bot::hear_gunfire (the port's weapon_fired). | `hearing.inc` `hearing_hear_gunfire` | ported |
+| hearing.rs Hearing::add (merges a sound within SAME_SOUND). | `hearing.inc` `hearing_add` | ported |
+| hearing.rs Hearing::tick (drops sounds older than HEARD_FOR). | `hearing.inc` `hearing_tick` | ported |
+| hearing.rs Hearing::investigate. | `hearing.inc` `hearing_investigate` | ported |
+| hearing.rs Hearing::newest_new | `hearing.inc` `hearing_newest_new` | ported |
 
 ### items.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| ItemMemory::default (a new bot). | `items.inc` `items_bot_init` | stub |
-| think.rs Bot::item_taken (the port's item_pickup) | `items.inc` `items_taken` | stub |
-| ItemMemory::scan (the list now and then). | `items.inc` `items_scan` | stub |
-| ItemMemory::look (the items in view | `items.inc` `items_look` | stub |
-| ItemMemory::get | `items.inc` `items_find` | stub |
-| ItemMemory::untakeable. | `items.inc` `items_untakeable` | stub |
-| ItemMemory::ignored. | `items.inc` `items_ignored` | stub |
-| ItemMemory::touched. | `items.inc` `items_touched` | stub |
+| ItemMemory::default (a new bot). | `items.inc` `items_bot_init` | ported |
+| think.rs Bot::item_taken + ItemMemory::taken (the port's item_pickup) | `items.inc` `items_taken` | ported |
+| ItemMemory::scan (ts_get_items every 5 s) | `items.inc` `items_scan` | ported |
+| ItemMemory::learn (an entity on the game's list) | `items.inc` `items_learn` | ported |
+| ItemMemory::look + seen (with think.rs learn_items' view cone) | `items.inc` `items_look` | ported |
+| ItemMemory::get | `items.inc` `items_find` | ported |
+| KnownItem::there_at | `items.inc` `items_there_at` | ported |
+| ItemMemory::untakeable. | `items.inc` `items_untakeable` | ported |
+| ItemMemory::ignored. | `items.inc` `items_ignored` | ported |
+| ItemMemory::touched. | `items.inc` `items_touched` | ported |
 
 ### board.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| TeamBoards::died | `board.inc` `board_died` | stub |
-| TeamBoards::clear (map change). | `board.inc` `board_clear` | stub |
-| TeamBoard::sight. | `board.inc` `board_sight` | stub |
-| TeamBoard::hear. | `board.inc` `board_hear` | stub |
-| TeamBoard::claim. | `board.inc` `board_claim` | stub |
-| TeamBoard::post (position and path). | `board.inc` `board_post` | stub |
-| TeamBoard::leave. | `board.inc` `board_leave` | stub |
-| TeamBoard::expire. | `board.inc` `board_expire` | stub |
+| TeamBoards::died | `board.inc` `board_died` | ported |
+| TeamBoards::clear (map change). | `board.inc` `board_clear` | ported |
+| TeamBoards::get(team).is_some() | `board.inc` `board_exists` | ported |
+| TeamBoard::sight. | `board.inc` `board_sight` | ported |
+| TeamBoard::hear. | `board.inc` `board_hear` | ported |
+| TeamBoard::claim. | `board.inc` `board_claim` | ported |
+| TeamBoard::post (position; the path is the bot's live RcPath) | `board.inc` `board_post` | ported |
+| TeamBoard::leave. | `board.inc` `board_leave` | ported |
+| TeamBoard::expire. | `board.inc` `board_expire` | ported |
+| TeamBoard sightings / sounds (readers for goals.inc) | `board.inc` `board_sighting_count`, `board_sighting`, `board_sound_count`, `board_sound` | ported |
+| goals.rs item claim check (board.claims) | `board.inc` `board_item_claimed` | ported |
+| TeamBoard::mates | `board.inc` `board_mates` | ported |
+| TeamBoard::paths_of_others' sources | `board.inc` `board_mate_paths` | ported |
+| navigate.rs threat_waypoints' team part | `board.inc` `board_add_threats` | ported |
+| roam_goal / claim_factor's claimed waypoints | `board.inc` `board_claimed_waypoints` | ported |
 
 ### kungfu.inc
 
