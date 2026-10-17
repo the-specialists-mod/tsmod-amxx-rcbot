@@ -6,7 +6,7 @@
 // Classnames and target names are read here (strings), but only on events: a touch, a special
 // waypoint reached, a lift task running. The tasks run on the current task (slot 0).
 //
-// Status: ported; task_throw_grenade turns with look_turn_to (no turn time argument there yet).
+// Status: ported.
 
 #if defined _rcbot_special_included
 	#endinput
@@ -835,7 +835,6 @@ stock special_task_face_edict(id, &bool:done, &bool:failed)
 // turns to the view pitch whose throw lands at the task's vector (fire_throw_pitch, gravity
 // 0.75 sv_gravity), pulls the pin (+attack) for 0.2 s and lets go (TS throws on release), then
 // takes out a loaded gun.
-// TODO(look): the Rust turn_to(aim, now, 0.04) has a turn time; look_turn_to takes none yet.
 stock special_task_throw_grenade(id, &bool:done, &bool:failed)
 {
 	new Float:now = g_now;
@@ -871,7 +870,7 @@ stock special_task_throw_grenade(id, &bool:done, &bool:failed)
 			g_lk_i[id][LK_LOOK_TASK] = LOOK_NONE;
 			vec_copy(aim, g_fi_v[id][FI_AIM_TRUE]);
 			g_fi_i[id][FI_AIM_TRUE_SET] = 1;
-			look_turn_to(id, aim);
+			look_turn_to(id, aim, 0.04);
 			if (floatabs(angle_diff(pitch, g_co_v[id][CO_VANGLE][0])) < 1.5 && floatabs(angle_diff(yaw, g_co_v[id][CO_VANGLE][1])) < 1.5)
 			{
 				bot_primary_attack(id);

@@ -48,7 +48,7 @@ stock preaim_target(id, cur, next)
 	nav_origin(cur, cur_o);
 	nav_origin(next, next_o);
 	vec_sub(next_o, cur_o, d);
-	look_normalize(d, heading);
+	vec_normalize(d, heading);
 	new team = g_th_i[id][TH_TEAM];
 	new best = -1, Float:best_score = 0.0;
 	new n = nav_count();
@@ -78,7 +78,7 @@ stock preaim_target(id, cur, next)
 		if (cur != next)
 		{
 			vec_sub(o, next_o, d);
-			look_normalize(d, dir);
+			vec_normalize(d, dir);
 			if (vec_dot(dir, heading) > 0.9)
 			{
 				continue;

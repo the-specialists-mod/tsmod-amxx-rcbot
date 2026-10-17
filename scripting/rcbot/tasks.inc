@@ -80,7 +80,9 @@ stock tasks_add(id, kind, schedule_id, edict, edict_serial, int_info, Float:floa
 	return k;
 }
 
-// Tasks::add_priority (AddPriorityTask): RemovePaths then AddTaskToFront. Slot 0, -1 never.
+// Tasks::add_priority (AddPriorityTask): RemovePaths then AddTaskToFront. Returns the new task's
+// slot (always 0, the front: a full queue drops its last task instead), for
+// tasks_set_time_to_complete (Task::with_timeout); callers treat -1 as "not added".
 stock tasks_add_priority(id, kind, schedule_id, edict, edict_serial, int_info, Float:float_info, const Float:vec[3])
 {
 	tasks_remove_paths(id);

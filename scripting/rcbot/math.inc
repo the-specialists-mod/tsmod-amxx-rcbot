@@ -99,18 +99,17 @@ stock Float:vec_distance_2d(const Float:a[3], const Float:b[3])
 	return floatpower(dx * dx + dy * dy, 0.5);
 }
 
-// math.rs Vector::normalize: the zero vector stays zero.
+// math.rs Vector::normalize (Vector::Normalize): the zero vector becomes (0, 0, 1); otherwise
+// scaled by 1 / length, as the Rust (not divided: the last bit can differ). out may be v.
 stock vec_normalize(const Float:v[3], Float:out[3])
 {
 	new Float:l = vec_length(v);
 	if (l == 0.0)
 	{
-		vec_zero(out);
+		vec_set(out, 0.0, 0.0, 1.0);
 		return;
 	}
-	out[0] = v[0] / l;
-	out[1] = v[1] / l;
-	out[2] = v[2] / l;
+	vec_scale(v, 1.0 / l, out);
 }
 
 // look.rs dot: DotProduct.

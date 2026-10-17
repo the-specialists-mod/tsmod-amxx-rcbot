@@ -67,8 +67,6 @@ Every bot thinks before any acts, so all read the same frame.
   they come from `ts_player_killed` and the last `ts_damage`.
 * **EntRef serials**: players' are user ids (as the host's); items' are `TSITM_SERIAL`; other
   entities have none (index only), since Pawn can't read an edict's serial number.
-* **Placeholder**: until think/combat/look/movement are ported, `minimal.inc` drives living bots
-  (wander, jump, shoot the nearest visible enemy) and buys an AK-47 and a Glock 18.
 
 ## 3. Rust → Pawn map
 
@@ -112,7 +110,7 @@ to the front drops the last task instead (the Rust queue is unbounded).
 | Tasks::is_empty / len. | `tasks.inc` `tasks_count` | ported |
 | Tasks::current's kind, TASK_NONE for none. | `tasks.inc` `tasks_current_kind` | ported |
 | Task::new + Tasks::add_to_end (AddTask) | `tasks.inc` `tasks_add` | ported |
-| Tasks::add_priority (AddPriorityTask). | `tasks.inc` `tasks_add_priority` | ported |
+| Tasks::add_priority (AddPriorityTask); returns the new task's slot (0) for tasks_set_time_to_complete. | `tasks.inc` `tasks_add_priority` | ported |
 | Tasks::add_to_front (with remove_same_task, Task::same). | `tasks.inc` `tasks_add_to_front` | ported |
 | Tasks::has_task. | `tasks.inc` `tasks_has` | ported |
 | Tasks::get_task | `tasks.inc` `tasks_find` | ported |
@@ -169,7 +167,7 @@ to the front drops the last task instead (the Rust queue is unbounded).
 | special.rs Bot::task_human_tower. | `special.inc` `special_task_human_tower` | ported |
 | special.rs Bot::task_wait_for_bot_at_wpt (OtherBot: one of our bots, by user id). | `special.inc` `special_task_wait_for_bot_at_wpt` | ported |
 | special.rs Bot::task_face_edict. | `special.inc` `special_task_face_edict` | ported |
-| special.rs Bot::task_throw_grenade | `special.inc` `special_task_throw_grenade` | partial: look_turn_to has no turn-time argument (Rust turn_to(aim, now, 0.04)) |
+| special.rs Bot::task_throw_grenade (turn_to(aim, now, 0.04): look_turn_to's frame_time argument) | `special.inc` `special_task_throw_grenade` | ported |
 
 ### look.inc
 
@@ -184,8 +182,7 @@ to the front drops the last task instead (the Rust queue is unbounded).
 | look.rs Bot::in_view_cone | `look.inc` `look_in_view_cone` | ported |
 | look.rs Bot::aim_point (design §4: chest, head for skilled bots with precise guns) | `look.inc` `look_aim_point` | ported |
 | look.rs Bot::aim_vector (GetAimVector rewritten: lead, angular error, settling) | `look.inc` `look_aim_vector` | ported |
-| look.rs Bot::turn_to (the aimed turn: time constant, feed-forward, max rate) | `look.inc` `look_turn_to` | ported |
-| math.rs Vector::normalize (zero becomes (0, 0, 1), unlike math.inc's vec_normalize) | `look.inc` `look_normalize` | ported |
+| look.rs Bot::turn_to (the aimed turn: time constant, feed-forward, max rate; frame_time argument, default the frame's) | `look.inc` `look_turn_to` | ported |
 
 ### preaim.inc
 
@@ -211,7 +208,7 @@ to the front drops the last task instead (the Rust queue is unbounded).
 | combat.rs Bot::is_enemy (players, tm_ model teams by model index, breakables) | `combat.inc` `combat_is_enemy` | ported |
 | combat.rs Bot::breakable_is_enemy (BotFunc_BreakableIsEnemy) | `combat.inc` `combat_breakable_is_enemy` | ported |
 | combat.rs Bot::can_avoid (CanAvoid, TS) | `combat.inc` `combat_can_avoid` | ported |
-| combat.rs Bot::update_visibles (the vision pass, vision revs per call) | `combat.inc` `combat_update_visibles` | partial: no PVS pre-test until world.inc's world_in_pvs compiles (the clear line decides alone) |
+| combat.rs Bot::update_visibles (the vision pass, vision revs per call; the PVS pre-test is world_in_pvs) | `combat.inc` `combat_update_visibles` | ported |
 | combat.rs Bot::is_inanimate | `combat.inc` `combat_is_inanimate` | ported |
 | combat.rs Bot::work_enemy_costs (survival gene via rl_bot_gene) | `combat.inc` `combat_work_enemy_costs` | ported |
 | combat.rs Bot::clear_enemy_costs | `combat.inc` `combat_clear_enemy_costs` | ported |
@@ -222,7 +219,6 @@ to the front drops the last task instead (the Rust queue is unbounded).
 | combat.rs Bot::decide_jump_duck_strafe (rl_bot_decide) | `combat.inc` `combat_decide_jump_duck_strafe` | ported |
 | combat.rs Bot::want_to_follow_enemy | `combat.inc` `combat_want_to_follow_enemy` | ported |
 | combat.rs Bot::run_for_cover (nav_cover with the heatmap, nav_nearest) | `combat.inc` `combat_run_for_cover` | ported |
-| think.rs trace_toss | `combat.inc` `combat_trace_toss` | ported (local copy until think.inc exposes one) |
 | combat.rs Bot::flee_grenades (design §4: any within 400 units) | `combat.inc` `combat_flee_grenades` | ported |
 | combat.rs Bot::remember_lost_enemy | `combat.inc` `combat_remember_lost_enemy` | ported |
 | combat.rs Bot::update_conditions | `combat.inc` `combat_update_conditions` | ported |
@@ -279,7 +275,7 @@ to the front drops the last task instead (the Rust queue is unbounded).
 | bot/weapons.rs BotWeapons::best_loaded_gun | `botweapons.inc` `botweapons_best_loaded_gun` | ported |
 | bot/weapons.rs BotWeapons::record | `botweapons.inc` `botweapons_record` | ported |
 | bot/weapons.rs BotWeapons::weapon_info | `botweapons.inc` `botweapons_weapon_info` | ported |
-| bot/weapons.rs BotWeapons::sync_inventory (world_inventory) | `botweapons.inc` `botweapons_sync_inventory` | ported |
+| bot/weapons.rs BotWeapons::sync_inventory (world_inventory; false and nothing changed when the read failed, think.rs's `if let Some`) | `botweapons.inc` `botweapons_sync_inventory` | ported |
 | bot/weapons.rs BotWeapons::best_weapon_id (enemy_dist < 0: none; need_weapons) | `botweapons.inc` `botweapons_best_weapon_id` | ported |
 | bot/weapons.rs BotWeapon::is_melee | `botweapons.inc` `botweapons_is_melee` | ported |
 | bot/weapons.rs BotWeapon::clip_is_empty | `botweapons.inc` `botweapons_clip_is_empty` | ported |
@@ -696,14 +692,14 @@ to the front drops the last task instead (the Rust queue is unbounded).
 | BotWorld::map_items | `world.inc` `world_items` | ported |
 |  | `world.inc` `world_item_field` | ported |
 |  | `world.inc` `world_item_origin` | ported |
-| BotWorld::inventory | `world.inc` `world_inventory` | ported |
+| BotWorld::inventory (-1 when the read failed: the Rust None, not "no weapons") | `world.inc` `world_inventory` | ported |
 |  | `world.inc` `world_inventory_field` | ported |
 |  | `world.inc` `world_owns` | ported |
 | Entity::entity_origin (BotWorld::entity_glance), cached for the frame | `world.inc` `world_entity_origin` | ported |
 | nav World::trace_line (UTIL_TraceLine) | `world.inc` `world_trace_line` | ported |
 | BotWorld::trace_point_hull (pfnTraceHull, point hull 0). | `world.inc` `world_trace_hull` | ported |
 | nav World::point_contents (CONTENTS_*). | `world.inc` `world_point_contents` | ported |
-| BotWorld::in_pvs | `world.inc` `world_in_pvs` | ported |
+| BotWorld::in_pvs (rcbot_nav's nav_in_pvs: fakemeta 1.10 has no EngFunc_SetFatPVS) | `world.inc` `world_in_pvs` | ported |
 | BotWorld::entities_in_sphere (UTIL_FindEntityInSphere, every match) | `world.inc` `world_entities_in_sphere` | ported |
 
 ### files.inc
@@ -731,7 +727,7 @@ to the front drops the last task instead (the Rust queue is unbounded).
 |  | `math.inc` `vec_length_2d` | ported |
 |  | `math.inc` `vec_distance` | ported |
 |  | `math.inc` `vec_distance_2d` | ported |
-| math.rs Vector::normalize | `math.inc` `vec_normalize` | ported |
+| math.rs Vector::normalize (zero becomes (0, 0, 1)) | `math.inc` `vec_normalize` | ported |
 | look.rs dot | `math.inc` `vec_dot` | ported |
 | look.rs fix_float_angle | `math.inc` `fix_float_angle` | ported |
 | look.rs fix_angles | `math.inc` `fix_angles` | ported |
@@ -756,10 +752,3 @@ to the front drops the last task instead (the Rust queue is unbounded).
 |  | `report.inc` `report_fired` | ported |
 |  | `report.inc` `report_runcmd` | ported |
 | lib.rs report | `report.inc` `report_frame` | ported |
-
-### minimal.inc
-
-| Rust (tsmod-rcbot-rs) | Pawn | Status |
-|---|---|---|
-| The loadout bought for the next life | `minimal.inc` `minimal_loadout` | placeholder |
-|  | `minimal.inc` `minimal_think_alive` | placeholder |

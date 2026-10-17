@@ -160,7 +160,7 @@ stock bool:fire_in_aim(id, enemy, Float:dist)
 	make_vectors(g_co_v[id][CO_VANGLE], fwd, right);
 	world_eyes(id, gun);
 	vec_sub(target, gun, d);
-	look_normalize(d, to);
+	vec_normalize(d, to);
 	new Float:off = floatacos(fclamp(vec_dot(fwd, to), -1.0, 1.0), radian);
 	return off <= 1.5 * floatatan(AIM_RADIUS / fmax(dist, 1.0), radian);
 }
@@ -253,7 +253,7 @@ stock fire_combat_move(id, const Float:enemy_origin[3], Float:dist)
 	world_origin(id, me);
 	vec_sub(me, enemy_origin, away);
 	away[2] = 0.0;
-	look_normalize(away, n);
+	vec_normalize(away, n);
 	if (dist > far)
 	{
 		movement_set_move_vector(id, enemy_origin);
@@ -334,7 +334,7 @@ stock fire_dodge(id, enemy, bool:perceptron)
 	combat_ent_view_ofs(enemy, eofs);
 	vec_add(eo, eofs, eo);
 	vec_sub(gun, eo, d);
-	look_normalize(d, n);
+	vec_normalize(d, n);
 	new bool:aimed_at = vec_dot(efwd, n) > 0.95;
 	if (!(hurt || aimed_at) || !(perceptron || random_float(0.0, 1.0) < 0.05 + 0.1 * fire_skill_share(id)))
 	{
@@ -415,7 +415,7 @@ stock Float:fire_threat_rep(id, ent, rep, bool:rep_set)
 	combat_ent_view_ofs(ent, eofs);
 	vec_add(eo, eofs, d);
 	vec_sub(gun, d, d);
-	look_normalize(d, n);
+	vec_normalize(d, n);
 	if (vec_dot(fwd, n) > 0.95)
 	{
 		score += 2.0;
@@ -621,12 +621,9 @@ stock fire_grenade_behind_cover(id)
 	if (random_float(0.0, 1.0) < 0.3 + 0.5 * fire_skill_share(id))
 	{
 		new sched = tasks_new_schedule_id(id);
+		// Task::with_timeout(now, 4.0) on the slot add_priority_task filled (-1 ignored).
 		new slot = tasks_add_priority(id, TASK_THROW_GRENADE, sched, 0, 0, 0, 0.0, g_cb_v[id][CB_LAST_SEE_ENEMY_POS]);
-		// Task::with_timeout(now, 4.0): the task's time to complete (tasks' field) set here.
-		if (slot >= 0 && slot < RC_MAX_TASKS)
-		{
-			g_tk_f[id][slot][TK_TIME_TO_COMPLETE] = now + 4.0;
-		}
+		tasks_set_time_to_complete(id, slot, 4.0);
 	}
 }
 

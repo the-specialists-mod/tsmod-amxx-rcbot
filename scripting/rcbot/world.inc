@@ -312,14 +312,16 @@ stock world_item_origin(index, Float:out[3])
 	out[2] = Float:g_items[base + 2];
 }
 
-// BotWorld::inventory: the weapons id owns (TSINV_SIZE cells each); kung fu isn't one.
+// BotWorld::inventory: how many weapons id owns (TSINV_SIZE cells each, world_inventory_field);
+// kung fu isn't one. -1 when the read failed (tsx's status: the Rust None), which isn't "no
+// weapons": callers skip what they'd do with the list (botweapons_sync_inventory).
 stock world_inventory(id)
 {
 	if (g_inv_stamp[id] != g_frame_stamp)
 	{
 		g_inv_stamp[id] = g_frame_stamp;
 		new n = ts_get_inventory_ex(id, g_inv[id], RC_MAX_INVENTORY);
-		g_inv_count[id] = n < 0 ? 0 : (n > RC_MAX_INVENTORY ? RC_MAX_INVENTORY : n);
+		g_inv_count[id] = n < 0 ? -1 : (n > RC_MAX_INVENTORY ? RC_MAX_INVENTORY : n);
 	}
 	return g_inv_count[id];
 }
@@ -329,6 +331,7 @@ stock world_inventory_field(id, index, field)
 	return g_inv[id][index * TSINV_SIZE + field];
 }
 
+// False when the inventory couldn't be read (n is -1: the loop doesn't run).
 stock bool:world_owns(id, game_weapon)
 {
 	new n = world_inventory(id);
@@ -419,11 +422,11 @@ stock world_point_contents(const Float:at[3])
 	return engfunc(EngFunc_PointContents, at);
 }
 
-// BotWorld::in_pvs: ENGINE_CHECK_VISIBILITY(viewer, ENGINE_SET_PVS(origin)).
+// BotWorld::in_pvs: ENGINE_CHECK_VISIBILITY(viewer, ENGINE_SET_PVS(origin)), host api.rs in_pvs.
+// rcbot_nav's nav_in_pvs does it: AMX Mod X 1.10's fakemeta has no EngFunc_SetFatPVS.
 stock bool:world_in_pvs(viewer, const Float:origin[3])
 {
-	new pvs = engfunc(EngFunc_SetFatPVS, origin);
-	return engfunc(EngFunc_CheckVisibility, viewer, pvs) != 0;
+	return nav_in_pvs(viewer, origin);
 }
 
 // BotWorld::entities_in_sphere (UTIL_FindEntityInSphere, every match): up to max into out.

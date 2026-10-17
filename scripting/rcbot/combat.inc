@@ -3,8 +3,9 @@
 // RCBot by Paul "Cheeseh" Murphy; tsmod-amxx-rcbot, GPL-3.0-or-later with the AMX Mod X and RCBot
 // linking exceptions.
 //
-// Status: ported, but enemy_found's bot camera hand-off waits for botcam.inc (TODO(botcam)) and
-// flee_grenades' landing uses a local trace_toss until think.inc exposes its own.
+// Status: ported, but enemy_found's bot camera hand-off waits for botcam.inc (TODO(botcam)).
+// flee_grenades uses think.inc's think_is_grenade_rocket and think_trace_toss (think.inc comes
+// after this file; Pawn functions may be called before their definition).
 //
 // Entities: players are read from the frame's snapshots (world.inc), everything else with pev,
 // only for the entities a test needs (the vision pass reads the cached origin and effects first,
@@ -540,9 +541,8 @@ stock bool:combat_update_visibles(id)
 			combat_set_visible(id, i, false);
 			continue;
 		}
-		// TODO(core): the PVS test (world_in_pvs) first, once world.inc's compiles (fakemeta has
-		// no EngFunc_SetFatPVS): it only saves traces, the clear line decides.
-		if (!combat_fvisible(id, i))
+		// combat.rs:256: the entity's origin in the bot's PVS, before the trace.
+		if (!world_in_pvs(id, origin) || !combat_fvisible(id, i))
 		{
 			combat_set_visible(id, i, false);
 			continue;
@@ -955,29 +955,6 @@ stock combat_run_for_cover(id, const Float:origin[3], bool:now_flag)
 	tasks_set_time_to_complete_schedule(id, sched, random_float(5.0, 10.0));
 }
 
-// think.rs trace_toss (BotFunc_TraceToss, rewritten: design §4): where a thrown entity lands,
-// flown in 0.1 s steps under TS's grenade gravity (0.75 sv_gravity) until something is in the
-// way or the 3 s fuse ends. Local until think.inc exposes it.
-stock combat_trace_toss(ent, Float:out[3])
-{
-	new Float:g = world_cvar_gravity() * 0.75;
-	new Float:origin[3], Float:velocity[3], Float:next[3], Float:end[3], hit;
-	pev(ent, pev_origin, origin);
-	pev(ent, pev_velocity, velocity);
-	for (new k = 0; k < 30; k++)
-	{
-		velocity[2] -= g * 0.1;
-		vec_mad(origin, velocity, 0.1, next);
-		if (world_trace_line(origin, next, false, false, ent, end, hit) < 1.0)
-		{
-			vec_copy(end, out);
-			return;
-		}
-		vec_copy(next, origin);
-	}
-	vec_copy(origin, out);
-}
-
 // combat.rs Bot::flee_grenades (design §4; upstream fled only its avoid entity, §5.65): runs
 // from a grenade that will land within its 300-unit blast (and a bit) of the bot: any grenade
 // within 400 units, in view or not, its landing flown out. An existing cover schedule is kept.
@@ -994,7 +971,7 @@ stock combat_flee_grenades(id)
 		{
 			continue;
 		}
-		combat_trace_toss(e, land);
+		think_trace_toss(e, land);
 		if (vec_distance(land, me) < 330.0)
 		{
 			combat_run_for_cover(id, land, false);
@@ -1080,7 +1057,7 @@ stock combat_hurt_by(id, attacker, const Float:dir[3])
 	{
 		new Float:gun[3], Float:n[3];
 		world_eyes(id, gun);
-		look_normalize(dir, n);
+		vec_normalize(dir, n);
 		vec_mad(gun, n, -512.0, from);
 	}
 	else if (combat_ent_exists(attacker))

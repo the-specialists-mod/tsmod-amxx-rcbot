@@ -118,8 +118,12 @@ stock botweapons_frame_sync(id)
 	if (changed || (next <= now && (serial == 0 || next == 0.0)))
 	{
 		g_bw_f[id][BW_NEXT_INVENTORY_SYNC] = now + INVENTORY_SYNC;
-		botweapons_sync_inventory(id);
-		g_bw_i[id][BW_INVENTORY_SERIAL] = serial;
+		// think.rs: `if let Some(owned) = w.inventory(..)`: a failed read changes nothing, and the
+		// serial stays old so the next change reads again.
+		if (botweapons_sync_inventory(id))
+		{
+			g_bw_i[id][BW_INVENTORY_SERIAL] = serial;
+		}
 	}
 	new game_id = world_weapon(id), clip = world_clip(id), ammo = world_ammo(id);
 	new bool:set = g_bw_i[id][BW_LAST_INFO_SET] != 0;
@@ -195,10 +199,15 @@ stock botweapons_weapon_info(id, game_id, clip, ammo, &bool:drop)
 
 // bot/weapons.rs BotWeapons::sync_inventory (design §4): the weapons the game says the bot owns
 // (world_inventory) are recorded as WeaponInfo records the one in hand; one no longer owned is
-// forgotten. Kung fu isn't listed and stays.
-stock botweapons_sync_inventory(id)
+// forgotten. Kung fu isn't listed and stays. False (nothing changed) when the inventory couldn't
+// be read (world_inventory -1, the Rust None): a failed read mustn't forget every gun.
+stock bool:botweapons_sync_inventory(id)
 {
 	new n = world_inventory(id);
+	if (n < 0)
+	{
+		return false;
+	}
 	for (new w = 0; w < RC_MAX_WEAPONS; w++)
 	{
 		if (!g_bw_weapon[id][w][BW_HAS_WEAPON] || g_bw_weapon[id][w][BW_ID] == RC_KUNGFU)
@@ -227,6 +236,7 @@ stock botweapons_sync_inventory(id)
 			botweapons_record(id, game_id, world_inventory_field(id, k, TSINV_CLIP), world_inventory_field(id, k, TSINV_AMMO));
 		}
 	}
+	return true;
 }
 
 // bot/weapons.rs BotWeapons::best_weapon_id (CBotWeapons::GetBestWeaponId, TS): among the

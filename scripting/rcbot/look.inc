@@ -29,20 +29,6 @@ stock look_spawn_init(id)
 	g_lk_f[id][LK_HURT_TIME] = 0.0;
 }
 
-// math.rs Vector::normalize: the zero vector becomes (0, 0, 1) (math.inc's vec_normalize keeps
-// it zero; the combat port follows the Rust where a zero direction can occur).
-stock look_normalize(const Float:v[3], Float:out[3])
-{
-	new Float:l = vec_length(v);
-	if (l == 0.0)
-	{
-		vec_set(out, 0.0, 0.0, 1.0);
-		return;
-	}
-	new Float:inv = 1.0 / l;
-	vec_scale(v, inv, out);
-}
-
 // e^x (float.inc has no exp).
 stock Float:look_exp(Float:x)
 {
@@ -138,7 +124,7 @@ stock look_work_view_angles(id)
 				r[0] = random_float(0.0, 128.0) - 64.0;
 				r[1] = random_float(0.0, 128.0) - 64.0;
 				r[2] = random_float(0.0, 128.0) - 64.0;
-				look_normalize(r, n);
+				vec_normalize(r, n);
 				vec_mad(base, n, 64.0, g_lk_v[id][LK_CURRENT_LOOK_DIR]);
 				g_lk_f[id][LK_LAST_LOOK_TIME] = now + random_float(2.0, 4.0);
 			}
@@ -300,7 +286,7 @@ stock Float:look_dot_from_origin(id, const Float:origin[3])
 	make_vectors(g_co_v[id][CO_VANGLE], fwd, right);
 	world_eyes(id, gun);
 	vec_sub(origin, gun, d);
-	look_normalize(d, n);
+	vec_normalize(d, n);
 	return vec_dot(n, fwd);
 }
 
@@ -377,7 +363,7 @@ stock look_aim_vector(id, enemy, Float:out[3])
 
 	new Float:dir[3], Float:rel[3], Float:perp[3];
 	vec_sub(point, gun, d);
-	look_normalize(d, dir);
+	vec_normalize(d, dir);
 	world_velocity(id, mv);
 	vec_sub(ev, mv, rel);
 	vec_mad(rel, dir, -vec_dot(rel, dir), perp);
@@ -432,8 +418,10 @@ stock Float:look_step(Float:err, Float:ff, Float:close, Float:dt, Float:max_step
 // look.rs Bot::turn_to (design §4; upstream turned a fixed share of what was left every frame):
 // each axis closes the error with a time constant of 0.04-0.16 s (shorter with skill and aim
 // speed) and follows the aim point's own angular speed, at most 360-1080 degrees a second. A
-// view more than 10 degrees off restarts the aim's settling.
-stock look_turn_to(id, const Float:target[3])
+// view more than 10 degrees off restarts the aim's settling. frame_time is turn_to's third
+// argument, the step used on the first turn (or after a stall): the frame's (w.frame_time(), the
+// default, any negative value) or a caller's (special.rs task_throw_grenade passes 0.04).
+stock look_turn_to(id, const Float:target[3], Float:frame_time = -1.0)
 {
 	new Float:now = g_now;
 	new Float:gun[3];
@@ -450,7 +438,7 @@ stock look_turn_to(id, const Float:target[3])
 		true_yaw = yaw;
 	}
 	new Float:last_turn = g_fi_f[id][FI_LAST_TURN];
-	new Float:dt = last_turn > 0.0 && now > last_turn ? fmin(now - last_turn, 0.1) : fclamp(g_frametime, 0.001, 0.1);
+	new Float:dt = last_turn > 0.0 && now > last_turn ? fmin(now - last_turn, 0.1) : fclamp(frame_time < 0.0 ? g_frametime : frame_time, 0.001, 0.1);
 	new Float:ff_pitch = 0.0, Float:ff_yaw = 0.0;
 	if (g_fi_i[id][FI_LAST_IDEAL_SET] && last_turn > 0.0)
 	{
