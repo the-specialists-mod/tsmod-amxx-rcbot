@@ -129,10 +129,9 @@ Before calling a change done: `cargo fmt`, `cargo xtask test`, `cargo xtask lint
 ## Pinned dependencies
 
 `amxx` (tsmod-amxx-rs) and `rcbot` (tsmod-rcbot-rs) are git dependencies pinned by tag in the root
-`Cargo.toml`'s `[workspace.dependencies]`, the only place they are named. Both releases pin the
-port's v3.0.7 (plugin API 6), so the port crates resolve once. Bump them together, to releases
-that pin the same port tag (next: the plugin API v7 releases), and check `Cargo.lock` has one
-`goldsrc-sys` and one `ts-plugin-api`.
+`Cargo.toml`'s `[workspace.dependencies]`, the only place they are named. `amxx` v0.3.0 pins the
+port's v3.0.8 (plugin API 7); `rcbot` (v0.2.0) has no port dependency. When bumping, check
+`Cargo.lock` has one `goldsrc-sys` and one `ts-plugin-api`.
 
 ## Git
 

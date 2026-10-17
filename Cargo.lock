@@ -19,8 +19,8 @@ dependencies = [
 
 [[package]]
 name = "amxx"
-version = "0.2.0"
-source = "git+https://github.com/the-specialists-mod/tsmod-amxx-rs?tag=v0.2.0#fa66b42c08dbf48b7434312bf4cb796017a2aead"
+version = "0.3.0"
+source = "git+https://github.com/the-specialists-mod/tsmod-amxx-rs?tag=v0.3.0#8fe39403c528b214fce242bf9113196d065efba6"
 dependencies = [
  "goldsrc-sys",
  "libc",
@@ -86,8 +86,8 @@ checksum = "e4eba85ea1d0a966a983acd07deee566e67395d2d96b6fb39e62b5a833f1eb0b"
 
 [[package]]
 name = "goldsrc-sys"
-version = "3.0.7"
-source = "git+https://github.com/the-specialists-mod/the-specialistsmod-rs?tag=v3.0.7#ba33099d1c294c02de78493a6c4c83cb93177e4f"
+version = "3.0.8"
+source = "git+https://github.com/the-specialists-mod/the-specialistsmod-rs?tag=v3.0.8#be0dcebc99db35a9323508c387299e8015b5665c"
 dependencies = [
  "bindgen",
 ]
@@ -261,8 +261,8 @@ dependencies = [
 
 [[package]]
 name = "ts-plugin-api"
-version = "3.0.7"
-source = "git+https://github.com/the-specialists-mod/the-specialistsmod-rs?tag=v3.0.7#ba33099d1c294c02de78493a6c4c83cb93177e4f"
+version = "3.0.8"
+source = "git+https://github.com/the-specialists-mod/the-specialistsmod-rs?tag=v3.0.8#be0dcebc99db35a9323508c387299e8015b5665c"
 
 [[package]]
 name = "unicode-ident"
