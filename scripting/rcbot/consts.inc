@@ -257,3 +257,14 @@ enum
 
 // fire.rs AIM_RADIUS: the radius the bot treats a player as for "on target" and spread.
 #define AIM_RADIUS					14.0
+
+// ---- social (owner: social): constants files included before their owner need ----------------
+
+// bot/squad.rs SquadForm (eSquadForm) and CombatType (eCombatType): commands.inc and menu.inc
+// (included before squad.inc) set them.
+enum { FORM_NONE = 0, FORM_WEDGE, FORM_LINE, FORM_ECH_LEFT, FORM_ECH_RIGHT, FORM_COLUMN, FORM_VEE };
+enum { COMBAT_NONE = 0, COMBAT_STEALTH, COMBAT_COMBAT, COMBAT_CROUCH, COMBAT_PRONE };
+
+// config/rep.rs BOT_MIN_REP / BOT_MID_REP (a stranger's reputation).
+#define BOT_MIN_REP					0
+#define BOT_MID_REP					5
