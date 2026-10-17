@@ -1,0 +1,20 @@
+[package]
+name = "rcbot_learn"
+description = "RCBot's learners and learned-data files as an AMX Mod X module (rcbot_learn)"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+# xtask renames the output to AMX Mod X's file names (rcbot_learn_amxx_i386.so, rcbot_learn_amxx.dll).
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+amxx.workspace = true
+rcbot.workspace = true
+rcbot-amxx-common.workspace = true
+
+[lints.rust]
+unsafe_code = "deny"
