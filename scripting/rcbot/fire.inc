@@ -157,7 +157,7 @@ stock bool:fire_in_aim(id, enemy, Float:dist)
 		look_aim_point(id, enemy, target);
 	}
 	new Float:fwd[3], Float:right[3], Float:gun[3], Float:d[3], Float:to[3];
-	make_vectors(g_co_v[id][CO_VANGLE], fwd, right);
+	look_view_vectors(id, fwd, right);
 	world_eyes(id, gun);
 	vec_sub(target, gun, d);
 	vec_normalize(d, to);

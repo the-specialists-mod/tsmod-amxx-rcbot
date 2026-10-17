@@ -1,7 +1,8 @@
 //! `cargo xtask perf [linux] [win]`: what rcbot_amxx's `ts_frame` costs with 4, 16 and 31 bots,
 //! with the plugin loaded as servers run it (plugins.ini without `debug`).
 //!
-//! Per root and bot count: the e2e's install (fixtures included, the plugin without `debug`), a
+//! Per root and bot count: the e2e's install (fixtures included, the plugin without `debug`, no
+//! `rcbot_e2e`), a
 //! server on ts_dojo with 32 slots (the testenv's run.sh has 8, so this starts hlds itself, the
 //! same way), `rcbot_profile 5` over rcon (report.inc's profiler: `nav_clock_us` around
 //! `ts_frame` and its parts, logged to `logs/rcbot_amxx_profile.log` every 5 s), `rcbot addbot`
@@ -11,7 +12,7 @@
 //! Configs are restored and the server stopped as in the e2e.
 //!
 //! Environment: e2e's, plus `PERF_BOTS` (comma-separated counts, default `4,16,31`),
-//! `PERF_WARMUP`, `PERF_SECS`.
+//! `PERF_WARMUP`, `PERF_SECS`, `PERF_PLUGIN` (an .amxx to time instead of target/pawn's).
 
 use super::e2e::{self, Backup, Root};
 use super::{dist, env_path, home, pawn};
@@ -73,7 +74,7 @@ fn stats_fps(answer: &str) -> Option<f64> {
 }
 
 /// The testenv's run.sh with 32 slots: amxx_server.cfg, then hlds in the background.
-fn start(r: &Root) -> Result<(), String> {
+fn start(r: &Root) -> Result<std::process::Child, String> {
     let cfg = "// Written by tsmod-amxx-rcbot cargo xtask perf (as amxx-testenv/run.sh)\nexec server.cfg\nrcon_password amxxtest\nlog on\nmp_logecho 0\nts_bot_quota 0\n";
     e2e::replace(&r.dir.join("ts/amxx_server.cfg"), cfg.as_bytes())?;
     let _ = std::fs::remove_file(r.dir.join("qconsole.log"));
@@ -109,8 +110,8 @@ fn start(r: &Root) -> Result<(), String> {
     };
     let out = std::fs::File::create(r.dir.join("server-stdout.log")).map_err(|e| e.to_string())?;
     c.current_dir(&r.dir).args(args).stdin(Stdio::null()).stdout(out.try_clone().map_err(|e| e.to_string())?).stderr(out);
-    // Detached: stop.sh (by name and working directory) or `quit` ends it.
-    c.spawn().map(|_| ()).map_err(|e| format!("{}: {e}", r.os))
+    // `quit` (or stop.sh, by name and working directory) ends it; the caller reaps it.
+    c.spawn().map_err(|e| format!("{}: {e}", r.os))
 }
 
 fn console_file(r: &Root) -> PathBuf {
@@ -121,7 +122,7 @@ fn perf_count(r: &Root, testenv: &Path, bots: u32, warmup: u64, secs: u64) -> Re
     let amxx = r.dir.join("ts/addons/amxmodx");
     let log = amxx.join(format!("logs/{PROFILE_LOG}"));
     let _ = std::fs::remove_file(&log);
-    start(r)?;
+    let mut child = start(r)?;
     let up = e2e::wait_for(&console_file(r), Duration::from_secs(120), |t| t.contains("[rcbot_amxx] bot backend active"));
     let mut fps = Vec::new();
     if up {
@@ -140,11 +141,13 @@ fn perf_count(r: &Root, testenv: &Path, bots: u32, warmup: u64, secs: u64) -> Re
             }
         }
         e2e::quit(r, testenv);
+        let _ = child.wait();
         let mut s = summarize(&e2e::read(&log), bots, skip);
         s.fps = fps;
         return Ok(s);
     }
     e2e::quit(r, testenv);
+    let _ = child.wait();
     Err(format!("{}: the backend wasn't active within 120 s", r.os))
 }
 
@@ -156,7 +159,16 @@ fn perf_root(r: &Root, testenv: &Path, tsmod: &[PathBuf], counts: &[u32]) -> Res
     let mut backed = vec![amxx.join("configs/modules.ini"), amxx.join("configs/plugins.ini"), r.dir.join("ts/server.cfg")];
     backed.extend(e2e::fixtures().into_iter().map(|(rel, _)| r.dir.join("ts/tsmod/rcbot").join(rel)));
     let _backup = Backup::take(&backed);
+    let cfg = r.dir.join("ts/server.cfg");
+    let base = e2e::read(&cfg);
     e2e::install(r, tsmod, false)?;
+    // Another build of the plugin to time (an instrumented one, say) in place of target/pawn's.
+    if let Some(p) = std::env::var_os("PERF_PLUGIN") {
+        let to = r.dir.join(format!("ts/addons/amxmodx/plugins/{}.amxx", e2e::PLUGIN));
+        std::fs::copy(&p, &to).map_err(|e| format!("PERF_PLUGIN: {e}"))?;
+    }
+    // Without rcbot_e2e: report.inc's checks would run every frame.
+    e2e::replace(&cfg, format!("{base}\n// tsmod-amxx-rcbot perf\nts_bot_backend rcbot_amxx\n").as_bytes())?;
     let warmup = env_u64("PERF_WARMUP", 20);
     let secs = env_u64("PERF_SECS", 60);
     counts.iter().map(|&n| perf_count(r, testenv, n, warmup, secs)).collect()

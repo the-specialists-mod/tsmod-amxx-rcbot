@@ -42,6 +42,11 @@ new g_ws[RC_SLOTS][TSPS_SIZE];
 new g_items[RC_MAX_ITEMS * TSITM_SIZE];
 new g_items_count;
 new g_items_stamp = -1;
+// The list's index of each entity in it (the first), for the fetch g_items_gen: the vision pass
+// asks for every visible entity (items_learn), which was a walk of the list each.
+new g_item_of[RC_MAX_EDICTS];
+new g_item_of_gen[RC_MAX_EDICTS];
+new g_items_gen;
 new g_inv[RC_SLOTS][RC_MAX_INVENTORY * TSINV_SIZE];
 new g_inv_count[RC_SLOTS];
 new g_inv_stamp[RC_SLOTS] = {-1, ...};
@@ -295,8 +300,36 @@ stock world_items()
 		g_items_stamp = g_frame_stamp;
 		new n = ts_get_items(g_items, RC_MAX_ITEMS);
 		g_items_count = n < 0 ? 0 : (n > RC_MAX_ITEMS ? RC_MAX_ITEMS : n);
+		g_items_gen++;
+		for (new k = g_items_count - 1; k >= 0; k--)
+		{
+			new e = g_items[k * TSITM_SIZE + TSITM_ENT];
+			if (e > 0 && e < RC_MAX_EDICTS)
+			{
+				g_item_of[e] = k;
+				g_item_of_gen[e] = g_items_gen;
+			}
+		}
 	}
 	return g_items_count;
+}
+
+// The index in the frame's item list (world_items) of the first entry for ent, -1 none.
+stock world_item_of(ent)
+{
+	new n = world_items();
+	if (ent > 0 && ent < RC_MAX_EDICTS)
+	{
+		return g_item_of_gen[ent] == g_items_gen ? g_item_of[ent] : -1;
+	}
+	for (new k = 0; k < n; k++)
+	{
+		if (world_item_field(k, TSITM_ENT) == ent)
+		{
+			return k;
+		}
+	}
+	return -1;
 }
 
 stock world_item_field(index, field)
@@ -366,8 +399,15 @@ stock bool:world_entity_origin(ent, Float:out[3])
 	}
 	if (g_ent_stamp[ent] != g_frame_stamp)
 	{
+		// A free slot is free for the frame too (the stamp negated): every bot's vision pass
+		// walks the free slots below the highest entity.
+		if (g_frame_stamp > 0 && g_ent_stamp[ent] == -g_frame_stamp)
+		{
+			return false;
+		}
 		if (!pev_valid(ent))
 		{
+			g_ent_stamp[ent] = -g_frame_stamp;
 			return false;
 		}
 		g_ent_stamp[ent] = g_frame_stamp;
@@ -394,6 +434,17 @@ stock bool:world_entity_origin(ent, Float:out[3])
 
 // nav World::trace_line (UTIL_TraceLine): the fraction; end_pos and hit (entity index, -1 none,
 // 0 the world) out.
+// world_trace_line without the end position, for the line-of-sight tests (one native less: the
+// vision pass traces to every entity in view).
+stock Float:world_trace_hit(const Float:start[3], const Float:end[3], bool:ignore_monsters, bool:ignore_glass, ignore, &hit)
+{
+	engfunc(EngFunc_TraceLine, start, end, (ignore_monsters ? IGNORE_MONSTERS : DONT_IGNORE_MONSTERS) | (ignore_glass ? IGNORE_GLASS : 0), ignore, g_tr);
+	new Float:fraction;
+	get_tr2(g_tr, TR_flFraction, fraction);
+	hit = get_tr2(g_tr, TR_pHit);
+	return fraction;
+}
+
 stock Float:world_trace_line(const Float:start[3], const Float:end[3], bool:ignore_monsters, bool:ignore_glass, ignore, Float:end_pos[3], &hit)
 {
 	new flags = (ignore_monsters ? IGNORE_MONSTERS : DONT_IGNORE_MONSTERS) | (ignore_glass ? IGNORE_GLASS : 0);

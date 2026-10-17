@@ -33,15 +33,7 @@ stock items_bot_init(id)
 // The frame's list entry of entity ent (world_items), -1 none.
 static stock it_list_entry(ent)
 {
-	new n = world_items();
-	for (new k = 0; k < n; k++)
-	{
-		if (world_item_field(k, TSITM_ENT) == ent)
-		{
-			return k;
-		}
-	}
-	return -1;
+	return world_item_of(ent);
 }
 
 // ItemMemory::get: the slot of (ent, serial), -1 none.
@@ -187,7 +179,7 @@ static stock bool:it_in_view(id, const Float:eye[3], const Float:o[3])
 		return true;
 	}
 	vec_normalize(to, dir);
-	make_vectors(g_co_v[id][CO_VANGLE], fwd, right);
+	look_view_vectors(id, fwd, right);
 	return vec_dot(dir, fwd) > 0.5;
 }
 
@@ -214,7 +206,7 @@ stock items_look(id)
 		return;
 	}
 	g_it_next_look[id] = now + 0.5;
-	new Float:eye[3], Float:end_pos[3], hit;
+	new Float:eye[3], hit;
 	world_eyes(id, eye);
 	for (new k = 0; k < g_it_count[id]; k++)
 	{
@@ -222,7 +214,7 @@ stock items_look(id)
 		{
 			continue;
 		}
-		if (world_trace_line(eye, g_it_origin[id][k], true, true, id, end_pos, hit) < 1.0 && hit != g_it_i[id][k][IT_ENT])
+		if (world_trace_hit(eye, g_it_origin[id][k], true, true, id, hit) < 1.0 && hit != g_it_i[id][k][IT_ENT])
 		{
 			continue;
 		}

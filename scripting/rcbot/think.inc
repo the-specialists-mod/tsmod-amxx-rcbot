@@ -653,7 +653,7 @@ stock bool:think_facing(id, ent)
 	{
 		return false;
 	}
-	make_vectors(g_co_v[id][CO_VANGLE], fwd, right);
+	look_view_vectors(id, fwd, right);
 	world_eyes(id, src);
 	vec_mad(src, fwd, vec_distance(eo, src), dst);
 	pev(ent, pev_absmin, mins);

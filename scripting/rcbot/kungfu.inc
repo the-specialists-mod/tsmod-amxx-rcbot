@@ -2302,7 +2302,7 @@ static stock bool:kf_airborne(id, m, const Float:origin[3], Float:dist, Float:no
 				{
 					// CheckForWallJump's 48 units ahead, from the origin, along the view.
 					new Float:fwd[3], Float:right[3], Float:end[3], Float:pos[3], hit;
-					make_vectors(g_co_v[id][CO_VANGLE], fwd, right);
+					look_view_vectors(id, fwd, right);
 					vec_mad(me, fwd, 48.0, end);
 					if (world_trace_line(me, end, true, false, id, pos, hit) < 1.0 && !(g_kf_i[id][KF_LAST_BUTTONS] & IN_ALT1) && movement_stunt_ready(id))
 					{

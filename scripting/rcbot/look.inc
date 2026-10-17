@@ -279,11 +279,32 @@ stock Float:look_yaw_angle_to(id, const Float:origin[3])
 	return fix_float_angle(g_co_v[id][CO_VANGLE][1] - a[1]);
 }
 
+// The view's MAKE_VECTORS (make_vectors of the bot's v_angle), kept while the view doesn't change:
+// the vision pass asks for every entity it looks at (look_in_view_cone), six trig natives each.
+static Float:g_lk_vec_angles[RC_SLOTS][3];
+static Float:g_lk_vec_fwd[RC_SLOTS][3];
+static Float:g_lk_vec_right[RC_SLOTS][3];
+static bool:g_lk_vec_set[RC_SLOTS];
+
+stock look_view_vectors(id, Float:fwd[3], Float:right[3])
+{
+	new Float:a[3];
+	vec_copy(g_co_v[id][CO_VANGLE], a);
+	if (!g_lk_vec_set[id] || a[0] != g_lk_vec_angles[id][0] || a[1] != g_lk_vec_angles[id][1] || a[2] != g_lk_vec_angles[id][2])
+	{
+		make_vectors(a, g_lk_vec_fwd[id], g_lk_vec_right[id]);
+		vec_copy(a, g_lk_vec_angles[id]);
+		g_lk_vec_set[id] = true;
+	}
+	vec_copy(g_lk_vec_fwd[id], fwd);
+	vec_copy(g_lk_vec_right[id], right);
+}
+
 // look.rs Bot::dot_from_origin (DotProductFromOrigin).
 stock Float:look_dot_from_origin(id, const Float:origin[3])
 {
 	new Float:fwd[3], Float:right[3], Float:gun[3], Float:d[3], Float:n[3];
-	make_vectors(g_co_v[id][CO_VANGLE], fwd, right);
+	look_view_vectors(id, fwd, right);
 	world_eyes(id, gun);
 	vec_sub(origin, gun, d);
 	vec_normalize(d, n);

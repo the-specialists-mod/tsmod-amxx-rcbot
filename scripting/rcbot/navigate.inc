@@ -987,7 +987,7 @@ static stock nv_consider(Float:positions[][3], &count, const Float:end[3], Float
 stock bool:navigate_wall_on_side(id, Float:side)
 {
 	new Float:fwd[3], Float:right[3], Float:src[3], Float:end[3], Float:end_pos[3], hit;
-	make_vectors(g_co_v[id][CO_VANGLE], fwd, right);
+	look_view_vectors(id, fwd, right);
 	world_origin(id, src);
 	vec_mad(src, right, 40.0 * side, end);
 	return world_trace_line(src, end, false, false, id, end_pos, hit) < 1.0;

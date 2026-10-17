@@ -248,13 +248,13 @@ stock bool:combat_fvisible(id, ent)
 		g_th_i[id][TH_CONDITIONS] |= COND_SEE_ENEMY_BODY;
 		g_th_i[id][TH_CONDITIONS] &= ~COND_SEE_ENEMY_HEAD;
 	}
-	new Float:gun[3], Float:to[3], Float:end[3], hit;
+	new Float:gun[3], Float:to[3], hit;
 	world_eyes(id, gun);
 	if (!world_entity_origin(ent, to))
 	{
 		return false;
 	}
-	if (world_trace_line(gun, to, false, false, id, end, hit) >= 1.0 || hit == ent)
+	if (world_trace_hit(gun, to, false, false, id, hit) >= 1.0 || hit == ent)
 	{
 		return true;
 	}
@@ -266,7 +266,7 @@ stock bool:combat_fvisible(id, ent)
 	combat_ent_origin(ent, o);
 	combat_ent_view_ofs(ent, ofs);
 	vec_add(o, ofs, to);
-	if (world_trace_line(gun, to, false, false, id, end, hit) >= 1.0 || hit == ent)
+	if (world_trace_hit(gun, to, false, false, id, hit) >= 1.0 || hit == ent)
 	{
 		if (is_enemy)
 		{
@@ -285,9 +285,9 @@ stock bool:combat_fvisible(id, ent)
 // (monsters ignored).
 stock bool:combat_fvisible_point(id, const Float:v[3])
 {
-	new Float:eyes[3], Float:end[3], hit;
+	new Float:eyes[3], hit;
 	world_eyes(id, eyes);
-	return world_trace_line(eyes, v, true, false, id, end, hit) >= 1.0;
+	return world_trace_hit(eyes, v, true, false, id, hit) >= 1.0;
 }
 
 // combat.rs box_in_sphere (pfnFindEntityInSphere's test): the entity's box comes nearer origin
@@ -489,7 +489,7 @@ stock bool:combat_update_visibles(id)
 		g_mv_i[id][MV_AVOID_SERIAL] = 0;
 		g_th_i[id][TH_CONDITIONS] &= ~(COND_SEE_ENEMY | COND_SEE_ENEMY_HEAD);
 		new Float:fwd[3], Float:right[3], Float:far[3];
-		make_vectors(g_co_v[id][CO_VANGLE], fwd, right);
+		look_view_vectors(id, fwd, right);
 		vec_mad(gun, fwd, 768.0, far);
 		world_trace_line(gun, far, false, false, id, end, hit);
 		g_cb_f[id][CB_DISTANCE_FROM_WALL] = vec_distance(end, gun);
@@ -527,6 +527,9 @@ stock bool:combat_update_visibles(id)
 
 	new Float:origin[3];
 	new leader = g_sq_i[id][SQ_LEADER], leader_serial = g_sq_i[id][SQ_LEADER_SERIAL];
+	// look_in_view_cone's view and eyes, once for the pass (the view doesn't turn during it).
+	new Float:view_fwd[3], Float:view_right[3], Float:d[3], Float:n[3];
+	look_view_vectors(id, view_fwd, view_right);
 	for (new i = start; i <= max; i++)
 	{
 		// Upstream's tests in its order, the cheap ones on a glance at the entity.
@@ -535,8 +538,24 @@ stock bool:combat_update_visibles(id)
 			combat_set_visible(id, i, false);
 			continue;
 		}
-		new Float:dist = vec_distance(origin, gun);
-		if (dist > BOT_VIEW_DISTANCE || !look_in_view_cone(id, origin))
+		// vec_distance(origin, gun), and look_in_view_cone's normalised direction from the same
+		// difference and length (look_dot_from_origin, vec_normalize).
+		vec_sub(origin, gun, d);
+		new Float:dist = vec_length(d);
+		if (dist > BOT_VIEW_DISTANCE)
+		{
+			combat_set_visible(id, i, false);
+			continue;
+		}
+		if (dist == 0.0)
+		{
+			vec_set(n, 0.0, 0.0, 1.0);
+		}
+		else
+		{
+			vec_scale(d, 1.0 / dist, n);
+		}
+		if (!(vec_dot(n, view_fwd) > 0.5))
 		{
 			combat_set_visible(id, i, false);
 			continue;

@@ -195,7 +195,7 @@ stock movement_size(id, Float:out[3])
 static stock Float:mv_avoid_angle(id, const Float:origin[3])
 {
 	new Float:fwd[3], Float:right[3], Float:v[3], Float:view[3], Float:enemy[3], Float:me[3];
-	make_vectors(g_co_v[id][CO_VANGLE], fwd, right);
+	look_view_vectors(id, fwd, right);
 	vec_scale(fwd, 4096.0, v);
 	vec_to_angles(v, view);
 	fix_angles(view);

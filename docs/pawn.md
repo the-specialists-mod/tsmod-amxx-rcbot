@@ -97,6 +97,14 @@ Every bot thinks every frame (`ts_frame`, 100+ times a second with 32 slots). Pe
   `is_user_alive` per bot per frame: `world_alive`, `world_origin`, `world_eyes`,
   `world_health`, `world_weapon`, ... Entvars the snapshot lacks (`pev_waterlevel`,
   `pev_movetype`) are a cheap `pev` each.
+* **Cache what a loop asks again.** The vision pass (`combat_update_visibles`) looks at up to the
+  profile's vision revs entities per think: per entity it costs what its helpers cost.
+  `look_view_vectors(id, fwd, right)` keeps the view's `make_vectors` while the view is the same
+  (six trig natives); `world_entity_origin` remembers a free slot for the frame as well as a used
+  one; `world_item_of(ent)` is the frame's entity → item list index (no walk of the list);
+  `world_trace_hit` is `world_trace_line` without the end position (one native less) for
+  line-of-sight tests. Measure with `rcbot_profile` (`cargo xtask perf`): with 31 bots the
+  engine's traces of the vision pass are most of `ts_frame`.
 * **Budget traces.** `world_trace_line` is an engine trace: gate vision and searches on the
   think time (`TH_THINK_TIME`, `CB_UPDATE_VISIBLES_TIME`, the profile's `PR_VISION_REVS`) as the
   Rust bot does, never all bots x all entities each frame.
