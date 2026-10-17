@@ -88,7 +88,7 @@ new g_act_text[RC_SLOTS][RC_MAX_ACTIONS][RC_ACTION_TEXT];	// ACT_COMMAND's line
 new g_loadout_ids[RC_SLOTS][RC_MAX_LOADOUT];			// Action::Loadout's ids (RCBot ids)
 
 // ============================================================================================
-// profile (owner: config; profile.inc, rep.inc). config/profile.rs BotProfile (m_Profile),
+// profile (owner: social; profile.inc, rep.inc). config/profile.rs BotProfile (m_Profile),
 // config/rep.rs Reputations (m_Profile.m_Rep).
 // ============================================================================================
 
@@ -656,7 +656,7 @@ stock Float:g_kf_v[RC_SLOTS][Kf_V][3];
 stock g_kf_opp_attacks[RC_SLOTS][KF_ATTACK_KINDS];
 
 // ============================================================================================
-// learning (owner: kungfu+learning; learning.inc). learning.rs BotLearning; the rcbot_learn
+// learning (owner: kungfu; learning.inc). learning.rs BotLearning; the rcbot_learn
 // handle (BotLearnedData, ledger, weapon stats and loadout bandit live in the module).
 // ============================================================================================
 

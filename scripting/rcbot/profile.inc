@@ -1,5 +1,5 @@
 // rcbot/profile.inc: bot profiles (bot_profiles.ini, botprofiles/<id>.ini).
-// Owner: config. Ports config/profile.rs (BotProfile::init, BotProfile::read,
+// Owner: social. Ports config/profile.rs (BotProfile::init, BotProfile::read,
 // parse_profile_list, choose_profile, profile_file_name) and host bots.rs profile_for.
 // RCBot by Paul "Cheeseh" Murphy; tsmod-amxx-rcbot, GPL-3.0-or-later with the AMX Mod X and RCBot
 // linking exceptions.

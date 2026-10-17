@@ -52,18 +52,19 @@ new bool:g_life_start_set[RC_SLOTS];
 stock report_init()
 {
 	g_pcvar_e2e = register_cvar("rcbot_e2e", "0");
+	report_refresh_mode();
+}
+
+// plugin_init and plugin_cfg: the localinfo key or the cvar (a config may set it after
+// plugin_init).
+stock report_refresh_mode()
+{
 	new li[8];
 	get_localinfo("rcbot_e2e", li, charsmax(li));
 	if (li[0] == '1')
 	{
 		set_pcvar_num(g_pcvar_e2e, 1);
 	}
-	report_refresh_mode();
-}
-
-// plugin_cfg and every check: the cvar may be set by a config after plugin_init.
-stock report_refresh_mode()
-{
 	new bool:on = get_pcvar_num(g_pcvar_e2e) != 0;
 	if (on && !g_e2e)
 	{

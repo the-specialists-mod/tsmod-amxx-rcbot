@@ -1,5 +1,5 @@
 // rcbot/config.inc: RCBot's settings (CBotGlobals' configurable part).
-// Owner: config. Ports config/mod.rs (Config, its defaults, is_on, change_setting,
+// Owner: social. Ports config/mod.rs (Config, its defaults, is_on, change_setting,
 // is_debug_on), config/file.rs (read_config: bot_config.ini's tokenizer, read_bot_folder) and
 // host lib.rs map_config_frame (map_configs/ts/<map>.cfg, a line a frame).
 // RCBot by Paul "Cheeseh" Murphy; tsmod-amxx-rcbot, GPL-3.0-or-later with the AMX Mod X and RCBot
