@@ -8,7 +8,7 @@
 //! (`include/rcbot_learn.inc`, `#pragma reqlib rcbot_learn`).
 //!
 //! * The global learned data (`team<n>.rld`, `tsweaps.rld`, `weaponstats.rwr`, `loadouts.rlo`,
-//!   `botprofiles/players.rop`, the map's `.rhm` heatmap), one per server.
+//!   `botprofiles/players.rop`), one per server. (The map's `.rhm` heatmap is rcbot_nav's.)
 //! * Each bot's learned data by handle (`botprofiles/<key>.rld`, `.rwr`, `.rlo`) with the queries
 //!   the bot logic makes: spawn and death bookkeeping, the loadout GA and bandit, the jump, duck,
 //!   strafe and stunt perceptrons, weapon effectiveness by range, the combat ledger.

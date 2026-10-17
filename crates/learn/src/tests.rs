@@ -263,32 +263,6 @@ fn opponents_by_player_slot() {
 }
 
 #[test]
-fn heatmap_files() {
-    let d = setup("heatmap");
-    let mut a = FakeArgs::new(&[]);
-    let map = a.alloc_str("ts_dojo");
-    a.params = vec![map, 10];
-    assert_eq!(n::rl_heatmap_load(&mut a), 0, "no file yet");
-    for _ in 0..3 {
-        a.params = vec![4, 1];
-        n::rl_heatmap_add_death(&mut a);
-    }
-    // Counts take the rules team (1), queries RCBot's team (rules team - 1).
-    a.params = vec![4, 0];
-    assert_eq!(fl(n::rl_heatmap_danger(&mut a)), 3.0 / 5.0, "0.5 at 2 deaths");
-    a.params = vec![4, 1];
-    assert_eq!(fl(n::rl_heatmap_danger(&mut a)), 0.0);
-    a.params = vec![];
-    assert_eq!(n::rl_heatmap_save(&mut a), 1);
-    let file = d.join("waypoints/ts/ts_dojo.rhm");
-    assert_eq!(std::fs::read(&file).unwrap(), with(|s| s.globals.heatmap.to_bytes()).unwrap());
-    a.params = vec![map, 10];
-    assert_eq!(n::rl_heatmap_load(&mut a), 1);
-    a.params = vec![map, 11];
-    assert_eq!(n::rl_heatmap_load(&mut a), 0, "other waypoints: a new heatmap");
-}
-
-#[test]
 fn the_ledger() {
     setup("ledger");
     let mut a = FakeArgs::new(&[]);

@@ -39,8 +39,8 @@ native rl_seed(seed);
 native rl_load_globals();
 
 /**
- * Writes the global files (and the map's heatmap, when one is loaded), as the standalone plugin
- * does at the map's end. Call in plugin_end.
+ * Writes the global files, as the standalone plugin does at the map's end (it also writes the
+ * map's heatmap: nav_heatmap_save in rcbot_nav.inc). Call in plugin_end.
  *
  * @return          The number of files written.
  */
@@ -317,42 +317,6 @@ native rl_opp_profile(player, Float:out[], len);
  * A new map: counts fade, stunt timing restarts. Call in plugin_init after rl_load_globals.
  */
 native rl_opp_new_map();
-
-// ---- the heatmap (waypoints/ts/<map>.rhm) ----
-// Waypoints are indexes of the map's waypoints. Counts take the player's rules team (1, 2, ...;
-// 0 none); danger and cover take RCBot's team (rules team - 1; -1 none), as the bot asks.
-
-/**
- * The map's heatmap for its waypoints (a new one when the file is missing or was made for
- * another waypoint count), faded once for this load.
- *
- * @return          true if the file was used.
- */
-native bool:rl_heatmap_load(const map[], num_waypoints);
-
-/**
- * Writes the heatmap (also done by rl_save_globals).
- */
-native bool:rl_heatmap_save();
-
-native rl_heatmap_add_death(waypoint, rules_team);
-native rl_heatmap_add_kill(waypoint, rules_team);
-native rl_heatmap_add_damage(waypoint, rules_team, Float:amount);
-
-/**
- * How dangerous the waypoint is for the team: 0..1 (0.5 at 2 deaths).
- */
-native Float:rl_heatmap_danger(waypoint, bot_team);
-
-/**
- * Units to add to a cover waypoint's distance (up to 256).
- */
-native Float:rl_heatmap_cover_penalty(waypoint, bot_team);
-
-/**
- * How good the waypoint has been to kill from, any team: 0..1.
- */
-native Float:rl_heatmap_ambush(waypoint);
 
 // ---- the combat ledger (per bot, in memory) ----
 // opponent -1 means anyone.

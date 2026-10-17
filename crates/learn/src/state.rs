@@ -1,5 +1,5 @@
 // tsmod-amxx-rcbot, GPL-3.0-or-later with the AMX Mod X and RCBot exceptions. The file handling
-// ports tsmod-rcbot-rs's host (`bots.rs`: `new_bot`, `save_bot`, `save_globals`, `load_heatmap`;
+// ports tsmod-rcbot-rs's host (`bots.rs`: `new_bot`, `save_bot`, `save_globals`;
 // `lib.rs`: the global files' load), RCBot's `CBot::loadLearnedData` / `saveLearnedData` and
 // `CBotGlobals::loadLearnedData` / `saveLearnedData`.
 
@@ -16,14 +16,12 @@ use rcbot::learn::loadout::{self, LoadoutBandit};
 use rcbot::learn::opponents::{self, OpponentKey};
 use rcbot::learn::store::profile_key;
 use rcbot::learn::weapon_stats::{self, WeaponStats};
-use rcbot::learn::{BotGaValues, Ga, Heatmap, Nn, Perceptron, Som};
+use rcbot::learn::{BotGaValues, Ga, Nn, Perceptron, Som};
 use rcbot_amxx_common::{DataDir, Handles, ModuleRandom};
 use std::cell::RefCell;
 
 /// RCBot's bot folder for profiles (`BOT_PROFILES_FOLDER`).
 pub const PROFILES: &str = rcbot::config::BOT_PROFILES_FOLDER;
-/// The mod folder the heatmaps live under (`waypoints/<mod>/<map>.rhm`, beside the waypoints).
-pub const MOD_FOLDER: &str = "ts";
 /// Player slots (entity indexes 1-32).
 pub const MAX_PLAYERS: usize = 32;
 
@@ -83,10 +81,10 @@ impl State {
     /// `CBotGlobals::loadLearnedData` and the port's global files: `team<n>.rld`,
     /// `tsweaps.rld`, `weaponstats.rwr`, `loadouts.rlo`, `botprofiles/players.rop`. Missing files
     /// start empty (the GAs append what they read, so this starts over rather than loading on
-    /// top). The heatmap and the player keys stay. Returns how many files were read.
+    /// top). The player keys stay. Returns how many files were read. (`GlobalLearnedData`'s
+    /// heatmap is unused here: the map's heatmap is rcbot_nav's, beside its waypoints.)
     pub fn load_globals(&mut self) -> usize {
-        let heatmap = std::mem::take(&mut self.globals.heatmap);
-        self.globals = GlobalLearnedData { heatmap, ..GlobalLearnedData::default() };
+        self.globals = GlobalLearnedData::default();
         let mut n = 0;
         for team in 0..MAX_TEAMS {
             if let Some(b) = self.dir.read(&data::team_file_name(team)) {
@@ -113,8 +111,9 @@ impl State {
         n
     }
 
-    /// `CBotGlobals::saveLearnedData` and the port's global files, and the map's heatmap when it
-    /// has one (as the standalone plugin's map end does). Returns how many files were written.
+    /// `CBotGlobals::saveLearnedData` and the port's global files (the standalone plugin's map end
+    /// also writes the heatmap: `nav_heatmap_save` in rcbot_nav). Returns how many files were
+    /// written.
     pub fn save_globals(&self) -> usize {
         let g = &self.globals;
         let mut files: Vec<(String, Vec<u8>)> = (0..MAX_TEAMS).map(|t| (data::team_file_name(t), g.save_team(t))).collect();
@@ -122,9 +121,6 @@ impl State {
         files.push((weapon_stats::GLOBAL_FILE.into(), g.weapon_prior.save().into_bytes()));
         files.push((loadout::GLOBAL_FILE.into(), g.loadout_prior.save().into_bytes()));
         files.push((players_file(), g.opponents.save().into_bytes()));
-        if !g.heatmap.is_empty() {
-            files.push((heatmap_path(g.heatmap.map_name()), g.heatmap.to_bytes()));
-        }
         files.iter().filter(|(f, b)| self.dir.write_logged(f, b)).count()
     }
 
@@ -161,27 +157,11 @@ impl State {
         ];
         files.iter().filter(|(f, b)| self.dir.write_logged(f, b)).count() == files.len()
     }
-
-    /// The map's heatmap for its waypoints as loaded (a new one when the file is missing or was
-    /// made for other waypoints), faded once for this load. True if the file was used.
-    pub fn load_heatmap(&mut self, map: &str, waypoints: usize) -> bool {
-        let loaded = self.dir.read(&heatmap_path(map)).and_then(|b| Heatmap::from_bytes(&b, map, waypoints));
-        let used = loaded.is_some();
-        let mut h = loaded.unwrap_or_else(|| Heatmap::new(map, waypoints));
-        h.decay(rcbot::learn::heatmap::MAP_DECAY);
-        self.globals.heatmap = h;
-        used
-    }
 }
 
 /// `botprofiles/players.rop`.
 pub fn players_file() -> String {
     format!("{PROFILES}/{}", opponents::PLAYERS_FILE)
-}
-
-/// `waypoints/ts/<map>.rhm`.
-pub fn heatmap_path(map: &str) -> String {
-    format!("waypoints/{MOD_FOLDER}/{}", rcbot::learn::heatmap::heatmap_file_name(map))
 }
 
 thread_local! {

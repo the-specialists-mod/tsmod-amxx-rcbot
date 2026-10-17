@@ -2,9 +2,9 @@
 // learning ports what tsmod-rcbot-rs's bot (`bot/learning.rs`, `think.rs`, `combat.rs`,
 // `manager.rs`) does with `rcbot::learn`, as calls the Pawn bot makes.
 
-//! The natives for the global learned data, each bot's learned data, the opponent model, the
-//! heatmap and the combat ledger, as `fn(&mut dyn Args) -> Cell` so tests run them against
-//! `FakeArgs`. `include/rcbot_learn.inc` documents each one.
+//! The natives for the global learned data, each bot's learned data, the opponent model and the
+//! combat ledger (the heatmap is rcbot_nav's), as `fn(&mut dyn Args) -> Cell` so tests run them
+//! against `FakeArgs`. `include/rcbot_learn.inc` documents each one.
 
 use crate::state::{BotLearn, MAX_PLAYERS, State, with};
 use amxx::Cell;
@@ -483,67 +483,6 @@ pub fn rl_opp_profile(a: &mut dyn Args) -> Cell {
 pub fn rl_opp_new_map(_: &mut dyn Args) -> Cell {
     with(|s| s.globals.opponents.new_map());
     1
-}
-
-// ---- the heatmap ----
-
-/// `bool:rl_heatmap_load(const map[], num_waypoints)`
-pub fn rl_heatmap_load(a: &mut dyn Args) -> Cell {
-    let map = a.string(1);
-    let n = count(a, 2);
-    with(|s| s.load_heatmap(&map, n) as Cell).unwrap_or(0)
-}
-
-/// `bool:rl_heatmap_save()`
-pub fn rl_heatmap_save(_: &mut dyn Args) -> Cell {
-    with(|s| {
-        let h = &s.globals.heatmap;
-        !h.is_empty() && s.dir.write_logged(&crate::state::heatmap_path(h.map_name()), &h.to_bytes())
-    })
-    .unwrap_or(false) as Cell
-}
-
-fn waypoint(a: &dyn Args, i: usize) -> Option<usize> {
-    usize::try_from(a.cell(i)).ok()
-}
-
-/// `rl_heatmap_add_death(waypoint, team)`
-pub fn rl_heatmap_add_death(a: &mut dyn Args) -> Cell {
-    let (Some(w), t) = (waypoint(a, 1), a.cell(2)) else { return 0 };
-    with(|s| s.globals.heatmap.add_death(w, t));
-    1
-}
-
-/// `rl_heatmap_add_kill(waypoint, team)`
-pub fn rl_heatmap_add_kill(a: &mut dyn Args) -> Cell {
-    let (Some(w), t) = (waypoint(a, 1), a.cell(2)) else { return 0 };
-    with(|s| s.globals.heatmap.add_kill(w, t));
-    1
-}
-
-/// `rl_heatmap_add_damage(waypoint, team, Float:amount)`
-pub fn rl_heatmap_add_damage(a: &mut dyn Args) -> Cell {
-    let (Some(w), t, d) = (waypoint(a, 1), a.cell(2), a.float(3)) else { return 0 };
-    with(|s| s.globals.heatmap.add_damage(w, t, d));
-    1
-}
-
-/// `Float:rl_heatmap_danger(waypoint, team)`
-pub fn rl_heatmap_danger(a: &mut dyn Args) -> Cell {
-    let (Some(w), t) = (waypoint(a, 1), a.cell(2)) else { return 0 };
-    float_cell(with(|s| s.globals.heatmap.danger(w, t)).unwrap_or(0.0))
-}
-
-/// `Float:rl_heatmap_cover_penalty(waypoint, team)`
-pub fn rl_heatmap_cover_penalty(a: &mut dyn Args) -> Cell {
-    let (Some(w), t) = (waypoint(a, 1), a.cell(2)) else { return 0 };
-    float_cell(with(|s| s.globals.heatmap.cover_penalty(w, t)).unwrap_or(0.0))
-}
-
-/// `Float:rl_heatmap_ambush(waypoint)`
-pub fn rl_heatmap_ambush(a: &mut dyn Args) -> Cell {
-    let Some(w) = waypoint(a, 1) else { return 0 };
-    float_cell(with(|s| s.globals.heatmap.ambush_value(w)).unwrap_or(0.0))
 }
 
 // ---- the combat ledger ----

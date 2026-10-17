@@ -1,11 +1,13 @@
-// rcbot_modules_smoke: calls every native of rcbot_megahal and rcbot_learn once, so
+// rcbot_modules_smoke: calls every native of rcbot_megahal, rcbot_learn and rcbot_nav once, so
 // `cargo xtask pawn` proves the includes compile (and, loaded on a server, `rcbot_smoke` shows
-// the modules answer). Writes learned files only below tsmod/rcbot/smoke/.
+// the modules answer). Writes learned files only below tsmod/rcbot/smoke/; the waypoints it edits
+// in memory are reloaded from the map's file at the end, never saved.
 // tsmod-amxx-rcbot, GPL-3.0-or-later with the AMX Mod X and RCBot linking exceptions.
 
 #include <amxmodx>
 #include <rcbot_megahal>
 #include <rcbot_learn>
+#include <rcbot_nav>
 
 // Never set: the savers are compiled, not run.
 new bool:smoke_never = false;
@@ -21,6 +23,7 @@ public cmd_smoke()
 	smoke_megahal();
 	smoke_learn();
 	smoke_objects();
+	smoke_nav();
 	server_print("[rcbot_smoke] DONE");
 	return PLUGIN_HANDLED;
 }
@@ -99,14 +102,6 @@ smoke_learn()
 	rl_opp_profile(1, profile, sizeof(profile));
 	server_print("[rcbot_smoke] threat %.2f", rl_opp_threat(1));
 
-	rl_heatmap_load("smoke_map", 4);
-	rl_heatmap_add_death(1, 1);
-	rl_heatmap_add_kill(2, 1);
-	rl_heatmap_add_damage(1, 1, 25.0);
-	rl_heatmap_danger(1, 0);
-	rl_heatmap_cover_penalty(1, 0);
-	rl_heatmap_ambush(2);
-
 	new Float:now = get_gametime();
 	rl_ledger_engage(bot, now, 1);
 	rl_ledger_record(bot, now, 1, 13, 30.0, 0.0, false, false, 500.0, -1);
@@ -124,7 +119,6 @@ smoke_learn()
 	if (smoke_never)
 	{
 		rl_bot_save(bot);
-		rl_heatmap_save();
 		rl_save_globals();
 	}
 	rl_bot_free(bot);
@@ -173,4 +167,127 @@ smoke_objects()
 	rl_som_weights(som, bmu, got, sizeof(got));
 	server_print("[rcbot_smoke] som epochs %d", rl_som_epochs(som));
 	rl_som_free(som);
+}
+
+smoke_nav()
+{
+	new map[64], out[64], text[64], params[7];
+	new Float:origin[3] = {0.0, 0.0, 0.0}, Float:there[3] = {200.0, 0.0, 0.0}, Float:got[3], Float:end[3];
+	new Float:weights[4], ignore[1] = {-1};
+	nav_seed(1);
+	new bool:loaded = nav_load();
+	nav_map(map, charsmax(map));
+	server_print("[rcbot_smoke] nav %s loaded %d count %d pending %d", map, loaded, nav_count(), nav_vis_pending());
+	nav_vis_budget(nav_vis_budget(1024));
+	nav_heatmap_load();
+
+	// A few waypoints of its own, in memory only.
+	new a = nav_add(origin, 0, 0, false, true, false);
+	new b = nav_add(there, NAV_FL_CROUCH, 0, false, true, false);
+	new c = nav_add_aiming(origin, Float:{0.0, 90.0, 0.0});
+	nav_add_path(a, b);
+	nav_remove_path(a, b);
+	nav_add_path(a, b);
+	nav_add_path(b, a);
+	nav_remove_paths_to(c);
+	nav_set_flags(b, NAV_FL_CROUCH);
+	nav_add_flags(b, NAV_FL_DOOR);
+	nav_clear_flags(b, NAV_FL_DOOR);
+	nav_set_origin(b, there);
+	nav_valid(a);
+	nav_origin(a, got);
+	nav_flags(b);
+	nav_distance(b, origin);
+	nav_nearest(origin);
+	nav_nearest(origin, 400.0, a, NAV_NEAREST_VISIBLE | NAV_NEAREST_BOT, ignore, 0);
+	nav_nearest_scan(origin, origin);
+	nav_nearest_flag(origin, NAV_FL_CROUCH);
+	nav_random_flag();
+	nav_random_flag_near(origin, 500.0);
+	nav_nearest_aiming(origin);
+	nav_find_reachable(origin, Float:{0.0, 0.0, 17.0});
+	nav_reachable(origin, there);
+	nav_paths_out(a, out, sizeof(out));
+	nav_paths_in(a, out, sizeof(out));
+	nav_has_path(a, b);
+	nav_cover(origin, there);
+	nav_buckets_around(origin, out, sizeof(out));
+	nav_nearby(origin, out, sizeof(out));
+	nav_visible(a, b);
+	nav_vis_rebuild(false);
+	nav_vis_finish();
+	nav_can_stand(origin, got);
+
+	nav_heatmap_add_death(a, 1);
+	nav_heatmap_add_kill(b, 1);
+	nav_heatmap_add_damage(a, 1, 25.0);
+	nav_heatmap_danger(a, 0);
+	nav_heatmap_cover_penalty(a, 0);
+	nav_heatmap_ambush(b);
+
+	new RcPath:path = nav_path_create();
+	new RcPath:other = nav_path_create();
+	nav_path_set_weights(path);
+	nav_path_set_threats(path, out, weights, 0);
+	nav_path_add_threat(path, there, 1.0);
+	nav_path_threats(path, out, weights, sizeof(weights));
+	nav_path_clear_threats(path);
+	nav_path_set_crowded(path, out, 0);
+	new RcPath:others[1];
+	others[0] = other;
+	nav_path_crowd_from(path, others, sizeof(others));
+	new NavPathStatus:st = nav_path_find(path, a, b, origin, -1, NAV_PATH_REVS, NAV_FIND_TACTICS | NAV_FIND_BACK_OFF);
+	while (st == NAV_PATH_SEARCHING)
+	{
+		st = nav_path_continue(path);
+	}
+	nav_path_find(path, a, b, origin, -1, 1, NAV_FIND_UPSTREAM, true);
+	server_print("[rcbot_smoke] path status %d next %d length %d", nav_path_status(path), nav_path_next(path), nav_path_length(path));
+	nav_path_push(path, a);
+	nav_path_get(path, out, sizeof(out));
+	nav_path_contains(path, b);
+	nav_path_after(path, a);
+	nav_path_pop(path);
+	nav_path_clear(path);
+	nav_path_fail(path, a, b);
+	nav_path_failed_count(path);
+	nav_path_clear_failed_paths(path);
+	nav_path_goal_reached(path, b);
+	nav_path_failed_goals(path, out, sizeof(out));
+	nav_path_ignored_goals(path, out, sizeof(out));
+	nav_path_clear_failed_goals(path);
+	nav_path_think(path);
+	nav_path_touch(path, a);
+	nav_path_since_visit(path, a);
+	nav_path_roam_goal(path, -1, origin);
+	nav_path_roam_goal(path, -1, origin, out, 0);
+	nav_draw_path(path);
+	nav_path_reset(path);
+	nav_path_free(other);
+	nav_path_free(path);
+
+	nav_edit_create_path(1, origin, 1);
+	nav_edit_create_path(1, there, 2);
+	nav_edit_remove_path(1, origin, 1);
+	nav_edit_remove_path(1, there, 2);
+	nav_auto_waypoint(1, false);
+	nav_auto_reset(1);
+	nav_draw_index(a);
+	nav_draw_around(1, origin);
+	server_print("[rcbot_smoke] nav events %d", nav_event_count());
+	while (nav_event_pop(got, end, params, text, charsmax(text)) != NAV_EVENT_NONE)
+	{
+	}
+	nav_event_clear();
+	nav_delete(c);
+	nav_delete_near(there);
+
+	if (smoke_never)
+	{
+		nav_save();
+		nav_heatmap_save();
+	}
+	nav_clear();
+	// The map's own waypoints back, as the bot had them.
+	nav_load();
 }
