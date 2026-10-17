@@ -1,0 +1,31 @@
+[workspace]
+members = ["crates/*", "xtask"]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/the-specialists-mod/tsmod-amxx-rcbot"
+
+# The two upstream pins, in one place. Both releases pin the port to its v3.0.7 release (plugin
+# API version 6), so the port crates they pull in (goldsrc-sys, ts-plugin-api) resolve to one
+# copy. Bump them together (to the plugin API v7 releases) and keep `amxx` and `rcbot` on releases
+# that pin the same port tag.
+[workspace.dependencies]
+# The AMX Mod X module SDK (export_module!, natives!, Args, FakeArgs, core functions). Its
+# goldsrc-sys generates bindings from the FWGS headers (`FWGS_DIR`, see .cargo/config.toml).
+amxx = { git = "https://github.com/the-specialists-mod/tsmod-amxx-rs", tag = "v0.2.0" }
+# RCBot's pure-Rust bot library: MegaHAL, bot_chat.ini, the learners and their file formats.
+rcbot = { git = "https://github.com/the-specialists-mod/tsmod-rcbot-rs", tag = "v0.2.0" }
+rcbot-amxx-common = { path = "crates/common" }
+
+[profile.dev]
+panic = "abort" # unwinding across the C ABI is UB; be explicit
+
+[profile.release]
+panic = "abort"
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+debug = true

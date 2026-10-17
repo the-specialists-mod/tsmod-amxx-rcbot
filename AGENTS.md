@@ -1,0 +1,142 @@
+# AGENTS.md
+
+Guidance for coding agents (and people) working in this repository: **RCBot hosted by AMX Mod X**
+for the Rust port of The Specialists 3.0
+([the-specialistsmod-rs](https://github.com/the-specialists-mod/the-specialistsmod-rs), checked out
+at `../rust-hlmod-the-specialists`). Start with [README.md](README.md).
+
+## Design
+
+The standalone bot, [tsmod-rcbot-rs](https://github.com/the-specialists-mod/tsmod-rcbot-rs)
+(`../tsmod-rcbot-rs`), is a port plugin (`tsmod_rcbot`, `ts_bot_backend rcbot`): its `rcbot`
+library crate is the whole bot AI in pure Rust (no FFI, no file I/O) and its `host` crate glues it
+to the port's plugin API. This repository splits the same bot differently, so server operators
+and plugin authors can change the bot's behaviour in Pawn:
+
+* **Reusable Rust AMX Mod X modules** for what is heavy, stateful or file-backed, each a thin
+  native layer over `rcbot`:
+  * `rcbot_megahal` (`crates/megahal`, `include/rcbot_megahal.inc`): MegaHAL brains and
+    `bot_chat.ini` (`rcbot::chat`). Done.
+  * `rcbot_learn` (`crates/learn`, `include/rcbot_learn.inc`): the global and per-bot learned
+    data and their files, the opponent model, the heatmap, the combat ledger, and generic GAs,
+    perceptrons, NNs and SOMs (`rcbot::learn`). Done.
+  * `rcbot_nav` (`crates/nav`, later): waypoints (`.rcw`), visibility (`.rcv`), A*
+    (`rcbot::nav`). Not started: it needs engine wrappers the `amxx` crate doesn't have yet
+    (traces, point contents, entity queries), which go into tsmod-amxx-rs first.
+* **The bot logic as a Pawn plugin**, `scripting/rcbot_amxx.sma` (later phase): think, tasks,
+  combat, kung fu, squads, chat decisions; it registers with the port as bot backend
+  `rcbot_amxx` (`ts_bot_backend rcbot_amxx`). It calls the modules' natives where the Rust bot
+  calls `rcbot::chat` / `rcbot::learn` (see `crates/learn/src/natives.rs` for the mapping from
+  `bot/learning.rs`, `think.rs`, `combat.rs`, `manager.rs`).
+* `crates/common` (`rcbot-amxx-common`, an rlib): handle tables, the data directory with atomic
+  writes, the module's random numbers, cell/float/string helpers.
+
+**Data files are byte-compatible with the standalone `tsmod_rcbot`** and live in the same
+folder, `<gamedir>/tsmod/rcbot/` (AMX Mod X's `BuildPathname("tsmod/rcbot")`), with the same
+names and key scheme (`botprofiles/<id>_hal.brn`, `botprofiles/<key>.rld/.rwr/.rlo` with
+`rcbot::learn::store::profile_key`, `team<n>.rld`, `tsweaps.rld`, `weaponstats.rwr`,
+`loadouts.rlo`, `botprofiles/players.rop`, `waypoints/ts/<map>.rhm`). Never invent a format: the
+bytes come from `rcbot`'s own `save`/`load`, and the tests compare files with what `rcbot` writes.
+Writes are atomic (temporary file renamed over the old one), as the host's.
+
+The kung fu fighter's `<key>.rkf` belongs to the Pawn kung fu phase: `rcbot::bot::kungfu` is
+bot logic, not a learner, and isn't exposed (it could be passed through as an opaque blob later
+if the Pawn fighter keeps its format).
+
+## Sources of truth
+
+| Question | Where to look |
+|---|---|
+| What the bot does, file formats, upstream behaviour | `../tsmod-rcbot-rs/crates/rcbot` (pinned by tag in `Cargo.toml`) and its `docs/design.md`; RCBot upstream is APGRoboCop/rcbotold |
+| How files are found, loaded and saved | `../tsmod-rcbot-rs/crates/host/src/bots.rs` (`wake_hal`, `new_bot`, `save_bot`, `save_globals`, `load_heatmap`), `lib.rs` (global load) |
+| The module SDK (`export_module!`, `natives!`, `Args`, `FakeArgs`, core functions) | `../tsmod-amxx-rs/crates/amxx` (pinned by tag) and its AGENTS.md |
+| AMX Mod X's module ABI and Pawn | `../ref/amxmodx` |
+| The port's plugin API (bot backends) | `../rust-hlmod-the-specialists/crates/plugin-api` |
+
+## Layout and the `unsafe` boundary
+
+```
+crates/common/   rcbot-amxx-common: handles, DataDir, ModuleRandom, helpers (no unsafe)
+crates/megahal/  rcbot_megahal module: src/natives.rs, src/state.rs, src/tests.rs, src/ffi.rs
+crates/learn/    rcbot_learn module: src/natives.rs, src/objects.rs, src/state.rs, src/tests.rs, src/ffi.rs
+include/         rcbot_megahal.inc, rcbot_learn.inc (shipped in dist)
+scripting/       Pawn plugins; scripting/test/rcbot_modules_smoke.sma calls every native
+xtask/           cargo xtask build | dist | lint | test | pawn | e2e (e2e: TODO)
+```
+
+1. **No `unsafe` in this repository** except what `amxx::export_module!` and `amxx::natives!`
+   expand to, in each module's `src/ffi.rs` (`#[allow(unsafe_code)]` there only; the crates are
+   `#![deny(unsafe_code)]`). Engine or AMX Mod X access that isn't in `amxx` goes into
+   tsmod-amxx-rs as a safe wrapper first, then gets used here after a release.
+2. **Natives are `fn(&mut dyn Args) -> Cell`** in `natives.rs`/`objects.rs`, tested with
+   `amxx::native::FakeArgs` in `tests.rs`; each test runs on its own thread, so the thread-local
+   state is per test. `ffi.rs` only lists the table and the `ModuleDef`.
+3. **No native calls back into a plugin**, so the state's `RefCell` is never borrowed twice. If a
+   native ever fires a forward, release the state first (as tsx does).
+4. **Pure AMX Mod X modules**: no metamod exports (AMX Mod X would treat a library exporting
+   `Meta_Attach` as a metamod plugin; `xtask dist` checks). So there is no engine table:
+   randomness is `ModuleRandom` (seeded xorshift, `hal_seed`/`rl_seed`), not `RANDOM_LONG`.
+5. **Handles** are positive cells from `common::Handles`; `*_free(&h)` zeroes the variable. They
+   are cleared in `AMXX_PluginsUnloaded` (plugins reload every map); `rcbot_learn`'s global data
+   stays across maps, like the standalone plugin's.
+6. **Panics abort the server** (`panic = "abort"`): never index with plugin values; check sizes
+   (`natives::MAX_ARRAY`, `objects::MAX_SIZE`) and return a native error instead.
+
+## Build and test
+
+Requirements: Rust stable with `i686-unknown-linux-gnu` and `i686-pc-windows-gnu`, clang ≥ 18,
+32-bit glibc/libgcc, MinGW-w64, and `../xash3d-fwgs` (with `3rdparty/library_suffix`) or
+`FWGS_DIR`: `amxx` pulls in the port's `goldsrc-sys`, which generates bindings from the FWGS
+headers. `.cargo/config.toml` sets `FWGS_DIR` to `../xash3d-fwgs` unless the environment has it;
+xtask looks for `xash3d-fwgs` next to the checkout or any ancestor (worktrees work).
+
+```sh
+cargo xtask test                 # unit tests, host and i686, then `pawn` if amxxpc is there
+cargo xtask build [--release]    # both targets; must build without warnings
+cargo xtask lint                 # cargo fmt --check, clippy --all-targets -D warnings, both targets
+cargo xtask dist [--debug-info]  # dist/<platform>/addons/amxmodx/{modules,scripting/include}/ with
+                                 # AMX Mod X's names (rcbot_megahal_amxx_i386.so, rcbot_learn_amxx.dll, ...);
+                                 # checks the AMXX_* exports, no metamod exports, no MinGW runtime imports
+cargo xtask pawn                 # amxxpc on scripting/**/*.sma (include/ first; warnings fail)
+```
+
+`AMXX_SCRIPTING` names amxxpc's directory (default
+`~/dev/hl/ref/extracted/amxmodx-1.10.0-git5487-linux/addons/amxmodx/scripting`). amxxpc needs its
+own directory on `LD_LIBRARY_PATH` (xtask sets it).
+
+`cargo xtask e2e` is a TODO: model it on tsmod-amxx-rs's (the amxx-testenv roots under
+`~/games/amxx_rehlds_{linux,win}`, built by `../ref/amxx-testenv/setup.sh`), once the Pawn bot
+exists. The `~/games` roots are shared: never start servers there outside an e2e run, and stop
+them with the testenv's `stop.sh`.
+
+Before calling a change done: `cargo fmt`, `cargo xtask test`, `cargo xtask lint`, and
+`cargo xtask dist` when exports or the build change.
+
+## Conventions
+
+- **Keep `rcbot`'s behaviour.** Natives wrap `rcbot` functions; they don't reimplement them.
+  Where the host did something around a call (the order of brain load, save and pretrain; which
+  files are loaded for a bot), port it from `../tsmod-rcbot-rs/crates/host` and cite it.
+- **Native names** use `hal_`/`chat_` (megahal) and `rl_` (learn). Every native is in its
+  `.inc` with a doc comment, in the README's table, and called by
+  `scripting/test/rcbot_modules_smoke.sma`. Adding a native means all four plus a test.
+- **Strings** are bytes in `rcbot`. `Args::string` is UTF-8 (lossy) and `set_string` takes `&str`,
+  so non-UTF-8 bytes in names are replaced; keep conversions in `common` (`set_bytes`, `set_out`).
+- **Formatting** is rustfmt's (`rustfmt.toml`: 140 columns, `use_small_heuristics = "Max"`).
+  Comments say why; doc comments on public items; file headers credit RCBot (Paul "Cheeseh"
+  Murphy) and say GPL-3.0-or-later with the AMX Mod X and RCBot exceptions.
+
+## Pinned dependencies
+
+`amxx` (tsmod-amxx-rs) and `rcbot` (tsmod-rcbot-rs) are git dependencies pinned by tag in the root
+`Cargo.toml`'s `[workspace.dependencies]`, the only place they are named. Both releases pin the
+port's v3.0.7 (plugin API 6), so the port crates resolve once. Bump them together, to releases
+that pin the same port tag (next: the plugin API v7 releases), and check `Cargo.lock` has one
+`goldsrc-sys` and one `ts-plugin-api`.
+
+## Git
+
+- Work on `main`. Commit in logical steps; push only when asked.
+- Releases: push a `v*` tag; `.github/workflows/release.yml` builds both platforms (with the
+  Pawn compile check) and publishes `tsmod-amxx-rcbot-<tag>-<platform>.zip`. It pins the FWGS
+  commit the port's release workflow uses; bump them together.

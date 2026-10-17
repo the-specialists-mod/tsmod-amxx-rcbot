@@ -1,0 +1,12 @@
+[package]
+name = "rcbot-amxx-common"
+description = "Shared pieces of the RCBot AMX Mod X modules: handle tables, the data directory, randomness"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+amxx.workspace = true
+rcbot.workspace = true

@@ -1,0 +1,88 @@
+# Builds the modules (rcbot_megahal, rcbot_learn) for i686 Linux and Windows and publishes a
+# GitHub release when a `v*` tag is pushed: tsmod-amxx-rcbot-<tag>-<platform>.zip, each holding
+# addons/amxmodx/modules/ and scripting/include/ (rcbot_megahal.inc, rcbot_learn.inc) to copy over
+# a server's ts/addons/. A manual run (workflow_dispatch) builds the archives as a workflow
+# artifact without publishing a release.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    # 24.04 for its clang 18: bindgen with 22.04's clang 14 fails on the MinGW intrinsics headers.
+    runs-on: ubuntu-24.04
+    env:
+      FWGS_DIR: ${{ github.workspace }}/xash3d-fwgs
+      # amxxpc for the Pawn compile check (cargo xtask test / pawn).
+      AMXX_SCRIPTING: ${{ github.workspace }}/amxmodx/addons/amxmodx/scripting
+    steps:
+      - uses: actions/checkout@v4
+
+      # goldsrc-sys (the port's, through amxx; a git dependency) generates its bindings from the
+      # FWGS headers. Same commit as the port's and tsmod-amxx-rs's release workflows.
+      - name: FWGS headers
+        run: |
+          git clone --filter=blob:none https://github.com/FWGS/xash3d-fwgs xash3d-fwgs
+          git -C xash3d-fwgs checkout 51353ff8d65e58300eeb2bd014867673f1f367c6
+          git -C xash3d-fwgs submodule update --init 3rdparty/library_suffix
+
+      - name: Toolchains
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib mingw-w64 libclang-dev zip libc6:i386
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy \
+            --target i686-unknown-linux-gnu,i686-pc-windows-gnu
+          rustup default stable
+
+      # AMX Mod X 1.10's Linux base package, for amxxpc (a 32-bit binary): the build the
+      # amxx-testenv roots use, checked against its sha256.
+      - name: amxxpc
+        run: |
+          set -euo pipefail
+          curl -fsSL -o amxmodx.tar.gz https://www.amxmodx.org/amxxdrop/1.10/amxmodx-1.10.0-git5487-base-linux.tar.gz
+          echo "d82d1d65c907f358c48bdebc07e20084e7e8c4f4d0e95af275e8b43f32815c7e  amxmodx.tar.gz" | sha256sum -c
+          mkdir amxmodx
+          tar -xzf amxmodx.tar.gz -C amxmodx
+          ls "$AMXX_SCRIPTING/amxxpc"
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Unit tests and the Pawn compile check
+        run: cargo xtask test
+
+      - name: Lint
+        run: cargo xtask lint
+
+      # dist strips the libraries and fails if a module lacks the AMXX_* exports, exports
+      # metamod's entry points, or (Windows) imports a MinGW runtime DLL.
+      - name: Package
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME}"
+          [[ "$GITHUB_REF_TYPE" == tag ]] || version="${GITHUB_SHA::7}"
+          cargo xtask dist
+          mkdir -p out
+          for dir in dist/*/; do
+            platform=$(basename "$dir")
+            cp LICENSE GPL-EXCEPTION.txt README.md "$dir"
+            (cd "$dir" && zip -qr "$GITHUB_WORKSPACE/out/tsmod-amxx-rcbot-$version-$platform.zip" addons LICENSE GPL-EXCEPTION.txt README.md)
+          done
+          ls -l out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tsmod-amxx-rcbot
+          path: out/*
+
+      - name: Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" out/* --title "$GITHUB_REF_NAME" --generate-notes --verify-tag

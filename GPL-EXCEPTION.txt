@@ -1,0 +1,71 @@
+tsmod-amxx-rcbot is RCBot (rcbotold, by Paul "Cheeseh" Murphy, based on botman's HPB bot
+template, maintained by [APG]RoboCop) as AMX Mod X modules and an AMX Mod X plugin. It is
+licensed under the GNU General Public License, version 3, or (at your option) any later version
+(the full text is in LICENSE).
+
+It is a work based on two programs, and keeps the special exceptions of both:
+
+* RCBot, through tsmod-rcbot-rs (https://github.com/the-specialists-mod/tsmod-rcbot-rs), its
+  Rust port, whose `rcbot` library these modules are built on. RCBot is licensed under the GNU
+  General Public License, version 2, or (at your option) any later version; this work takes the
+  version 3 option.
+* AMX Mod X, whose module SDK (through tsmod-amxx-rs, https://github.com/the-specialists-mod/tsmod-amxx-rs)
+  and plugin interface these modules and plugins use. AMX Mod X is licensed under the GNU General
+  Public License, version 3, or (at your option) any later version.
+
+==============================================================================================
+RCBot's special exception, from its file headers (dlls/bot.cpp and every other RCBot source
+file), quoted unchanged:
+----------------------------------------------------------------------------------------------
+
+    In addition, as a special exception, the author gives permission to
+    link the code of this program with the Half-Life Game Engine ("HL
+    Engine") and Modified Game Libraries ("MODs") developed by Valve,
+    L.L.C ("Valve").  You must obey the GNU General Public License in all
+    respects for all of the code used other than the HL Engine and MODs
+    from Valve.  If you modify this file, you may extend this exception
+    to your version of the file, but you are not obligated to do so.  If
+    you do not wish to do so, delete this exception statement from your
+    version.
+
+----------------------------------------------------------------------------------------------
+The contributors to tsmod-amxx-rcbot extend the same exception to this work.
+
+Upstream RCBot: https://github.com/APGRoboCop/rcbotold (as ported by tsmod-rcbot-rs, from commit
+b9c86c2cbb4115d950ae24c8cd344a4216522888, "V 1.51-beta13").
+
+==============================================================================================
+AMX Mod X's exceptions:
+----------------------------------------------------------------------------------------------
+AMX MOD X LICENSE INFORMATION
+VERSION: AUGUST-04-2014
+
+AMX Mod X is licensed under the GNU General Public License, version 3, or (at
+your option) any later version.
+
+As a special exception, the AMX Mod X Development Team gives permission to link
+the code of this program with the Half-Life Game Engine ("HL Engine") and
+Modified Game Libraries ("MODs") developed via the Half-Life 1 SDK as full
+replacements for Valve games. You must obey the GNU General Public License in
+all respects for all other code used other than the HL Engine and MODs. This
+extension, at your option, may also be granted to works based on AMX Mod X.
+
+As an additional special exception to the GNU General Public License 3.0,
+AlliedModders LLC permits dual-licensing of DERIVATIVE WORKS ONLY (that is,
+Pawn/AMX Mod X Plugins and AMX Mod X Modules, or any software built from the AMX
+Mod X header files) under the GNU General Public License version 2 "or any
+higher version." As such, you may choose for your derivative work(s) to be
+compatible with the GNU General Public License version 2 as long as it is also
+compatible with the GNU General Public License version 3, via the "or any higher
+version" clause. This is intended for compatibility with other software.
+
+As a final exception to the above, any derivative works created prior to this
+date (August 4, 2014) may be exclusively licensed under the GNU General Public
+License version 2 (without an "or any higher version" clause) if and only if the
+work was already GNU General Public License 2.0 exclusive. This clause is
+provided for backwards compatibility only.
+----------------------------------------------------------------------------------------------
+This work takes the first extension: the AMX Mod X linking exception is granted to it, and with
+RCBot's above, it may be linked with the HL Engine and MODs (including The Specialists and its
+Rust port's server library, a replacement developed via the Half-Life 1 SDK) and loaded by AMX Mod
+X.
