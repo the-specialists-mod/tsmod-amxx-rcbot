@@ -1068,7 +1068,7 @@ stock navigate_heatmap_kill(victim, killer)
 	{
 		nav_heatmap_add_death(wpt, team);
 	}
-	if (killer != 0 && killer != victim)
+	if (killer > 0 && killer != victim)
 	{
 		wpt = nv_player_waypoint(killer, team);
 		if (wpt >= 0)

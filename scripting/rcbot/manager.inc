@@ -308,6 +308,7 @@ stock bot_teleported(id)
 // BotManager::death (BotClient_Generic_DeathMessage): killer -1 none, 0 the world.
 stock manager_death(killer, victim)
 {
+	navigate_heatmap_kill(victim, killer);
 	// A dead player isn't where it was last seen any more (design §4).
 	if (victim >= 1 && victim <= MAX_PLAYERS)
 	{
@@ -408,6 +409,7 @@ stock manager_damage(victim, attacker, Float:damage, hitgroup, wid, const Float:
 		combat_hurt_by(victim, attacker, dir);
 	}
 	learning_damage_event(victim, attacker, damage, hitgroup, wid);
+	navigate_heatmap_damage(victim, damage);
 }
 
 // BotManager::sound (pfnEmitSound's loop): every bot without an enemy within BOT_HEAR_DISTANCE
