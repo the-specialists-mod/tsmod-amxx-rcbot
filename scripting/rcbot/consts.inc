@@ -253,6 +253,11 @@ enum
 #define RC_MAX_JUMP_HEIGHT			45.0
 #define RC_CONTENTS_WATER			-3
 
+// ---- combat (owner: combat; look.inc, combat.inc, fire.inc read these) ----------------------
+
+// fire.rs AIM_RADIUS: the radius the bot treats a player as for "on target" and spread.
+#define AIM_RADIUS					14.0
+
 // ---- social (owner: social): constants files included before their owner need ----------------
 
 // bot/squad.rs SquadForm (eSquadForm) and CombatType (eCombatType): commands.inc and menu.inc

@@ -56,7 +56,7 @@ stock minimal_think_alive(id)
 }
 
 // The nearest living enemy in sight within MIN_VIEW (teams in teamplay, everyone otherwise).
-static minimal_find_enemy(id)
+static stock minimal_find_enemy(id)
 {
 	new Float:eyes[3], Float:other[3], Float:end[3], hit;
 	world_eyes(id, eyes);
@@ -94,7 +94,7 @@ static minimal_find_enemy(id)
 }
 
 // Take a gun out when the game left the bot with kung fu, reload an empty clip.
-static minimal_weapon(id)
+static stock minimal_weapon(id)
 {
 	new Float:now = g_now;
 	new wid = world_weapon(id);
@@ -120,7 +120,7 @@ static minimal_weapon(id)
 }
 
 // Face the enemy's upper chest, fire with fresh presses when on target, close in or strafe.
-static minimal_fight(id, enemy)
+static stock minimal_fight(id, enemy)
 {
 	new Float:eyes[3], Float:target[3], Float:d[3], Float:ang[3];
 	world_eyes(id, eyes);
@@ -156,7 +156,7 @@ static minimal_fight(id, enemy)
 }
 
 // Walk to move_to; pick another far visible spot when there, when stuck or now and then.
-static minimal_wander(id)
+static stock minimal_wander(id)
 {
 	new Float:now = g_now;
 	new Float:origin[3];
@@ -174,7 +174,7 @@ static minimal_wander(id)
 }
 
 // Of 8 random directions, the one with the longest clear line at eye height.
-static minimal_pick_spot(id)
+static stock minimal_pick_spot(id)
 {
 	new Float:eyes[3], Float:end[3], Float:pos[3], Float:dir[3], hit;
 	world_eyes(id, eyes);
@@ -199,7 +199,7 @@ static minimal_pick_spot(id)
 }
 
 // Forward and side speeds that move toward target whatever the view's yaw.
-static minimal_move_toward(id, const Float:target[3], Float:speed)
+static stock minimal_move_toward(id, const Float:target[3], Float:speed)
 {
 	new Float:origin[3], Float:d[3], Float:ang[3];
 	world_origin(id, origin);
@@ -211,7 +211,7 @@ static minimal_move_toward(id, const Float:target[3], Float:speed)
 }
 
 // Turn the view toward (pitch, yaw) at the bot's turn speed (look.rs set_view_angles' step).
-static minimal_turn(id, Float:pitch, Float:yaw)
+static stock minimal_turn(id, Float:pitch, Float:yaw)
 {
 	new Float:turn = g_lk_f[id][LK_TURN_SPEED] > 0.0 ? g_lk_f[id][LK_TURN_SPEED] : 15.0;
 	g_lk_f[id][LK_IDEAL_YAW] = yaw;
@@ -225,7 +225,7 @@ static minimal_turn(id, Float:pitch, Float:yaw)
 
 // Jump when the way ahead is blocked at the knees but clear at the waist; a new spot when both
 // are blocked or the bot hasn't moved for a second.
-static minimal_obstacles(id)
+static stock minimal_obstacles(id)
 {
 	new Float:now = g_now;
 	if (g_mv_f[id][MV_MOVE_SPEED] == 0.0 && g_mv_f[id][MV_STRAFE_SPEED] == 0.0)
