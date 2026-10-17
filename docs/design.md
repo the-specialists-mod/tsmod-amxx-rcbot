@@ -1,0 +1,706 @@
+# Design: the Pawn bot
+
+How `scripting/rcbot_amxx.sma` maps onto tsmod-rcbot-rs's bot (`../tsmod-rcbot-rs`, the
+standalone `tsmod_rcbot`), and where it differs. Conventions and file ownership:
+[pawn.md](pawn.md).
+
+## 1. Architecture
+
+| tsmod-rcbot-rs | Here |
+|---|---|
+| `crates/host` (plugin API v7: `register_bot_backend`, `start_frame`, callbacks) | `rcbot_amxx.sma` + `backend.inc`, `manager.inc`, `world.inc`, `files.inc` over tsx's `tsbot.inc` (tsmod-amxx-rs v0.3.0) and AMX Mod X's engine/fakemeta |
+| `rcbot::bot` (`Bot`, `BotManager`) | `scripting/rcbot/<module>.inc`, one per `bot/*.rs`; `struct Bot` is `state.inc` |
+| `rcbot::config`, `rcbot::weapons` | `config.inc`, `commands.inc`, `menu.inc`, `profile.inc`, `rep.inc`, `users.inc`, `client.inc`; `weapons.inc`, `tsweapons.inc` |
+| `rcbot::chat` | `rcbot_megahal` natives (`chat.inc` is the glue) |
+| `rcbot::learn` | `rcbot_learn` natives (`learning.inc`) |
+| `rcbot::nav` (waypoints, A*, heatmap, editor) | `rcbot_nav` natives (`navigate.inc`); each bot's A* state is an `RcPath` |
+
+### The frame (host lib.rs `start_frame`, lib.rs:489-578)
+
+`ts_frame` → `manager_frame`:
+
+1. `world_refresh_frame`: frame info, team scores, every slot's snapshot (once), the masters
+   (first frame of a map).
+2. `navigate_editor_frame`, `commands_force_grip_frame`, `config_map_config_frame`.
+3. Not the active backend: stop.
+4. `backend_rejoin_frame` (min_bots / max_bots / bots_leave_and_join).
+5. `manager_think_all` (`BotManager::frame`): per bot in index order, squad orders, the camera's
+   other-has-enemy, leaving, then `manager_bot_frame` (`Bot::frame`: snapshot → view / teleport
+   check, weapon sync, kick / kill, `think_bot`, `movement_run_player_move`). Then squad orders
+   and headings.
+6. `squad_flush_messages`, `botcam_frame`.
+7. `manager_act_all`: per bot, its actions in order (command, select weapon with
+   `weapon_select_failed` on `TSBOT_INVALID`, loadout = clear + buy ids 1..37 except 29 with 4
+   ammo, kill, kick), then `ts_bot_runcmd` (`TSBOT_SETVIEW | TSBOT_AUTOMSEC`) and
+   `bot_command_ran` (fixangle view, teleport).
+8. `report_frame` (e2e only).
+
+Every bot thinks before any acts, so all read the same frame.
+
+### Events
+
+| Host callback | Here |
+|---|---|
+| `client_put_in_server` / `client_disconnect` | `client_putinserver` / `client_disconnected` → `backend_put_in_server` / `backend_disconnect` |
+| `player_killed` | `ts_player_killed` → `manager_death` (`BotManager::death`) |
+| `damage` | `ts_damage` → `manager_damage` (hurt bot turns; learners) |
+| `kill_scored` | none in tsx: `learning_kill_event` builds the kill from `ts_player_killed` and the victim's last `ts_damage` (TODO(learning)) |
+| `sound` | `ts_sound` → `manager_sound` |
+| `entity_touch` | `ts_bot_touch` → `manager_touch` |
+| `weapon_fired` | `ts_weapon_fired` → `manager_weapon_fired` |
+| `item_pickup` | `ts_item_pickup` → `manager_item_pickup` |
+| `player_stunt` | tsfun's `client_stunt` → `learning_player_stunt` |
+| `client_command` say / say_team | `say` / `say_team` client commands → `chat_say_command` |
+| `add_bot` / `activate` / `deactivate` / `adopt_bot` | `ts_bot_add` / `ts_bot_activate` / `ts_bot_deactivate` / `ts_bot_adopt` |
+| `server_deactivate` / `shutdown` | `plugin_end` (`backend_save_all`, heatmap, squads, camera) |
+
+## 2. Differences from tsmod-rcbot-rs (the plugin host)
+
+* **Data folder**: RCBot's files are read and written in `tsmod/rcbot/` (the modules' and the
+  standalone plugin's folder, byte-compatible). `ts_bot_data_dir()` (`tsmod/rcbot_amxx/`) is
+  only a fallback for reading the ini files.
+* **Profiles across a map change** (`previous_profiles`): AMX Mod X reloads the plugin, so they
+  pass through the `rcbot_amxx_prof` localinfo key (`backend_store_prev_profiles`).
+* **Random numbers**: AMX Mod X's `random_num` / `random_float`, not the engine's `RANDOM_LONG`
+  sequence (the modules have their own seeded generators too).
+* **Kill events**: tsx has no `kill_scored` forward (weapon, headshot and kung fu tags of a kill);
+  they come from `ts_player_killed` and the last `ts_damage`.
+* **EntRef serials**: players' are user ids (as the host's); items' are `TSITM_SERIAL`; other
+  entities have none (index only), since Pawn can't read an edict's serial number.
+* **Placeholder**: until think/combat/look/movement are ported, `minimal.inc` drives living bots
+  (wander, jump, shoot the nearest visible enemy) and buys an AK-47 and a Glock 18.
+
+## 3. Rust → Pawn map
+
+Generated from the stubs' comments when the skeleton was made; owners keep their rows current
+(status `ported`, `partial`, `stub`, `placeholder`). Rust paths are relative to
+`../tsmod-rcbot-rs/crates/rcbot/src/bot/` unless they name `host`, `config/` or `weapons/`.
+
+### think.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| think.rs Bot::think (CBot::Think). | `think.inc` `think_bot` | partial: the living branch is minimal.inc |
+| think.rs Bot::think's dead branch | `think.inc` `think_dead` | ported |
+| think.rs Bot::spawn_init (CBot::SpawnInit(false)) | `think.inc` `think_spawn_init` | ported |
+| think.rs Bot::select_loadout | `think.inc` `think_select_loadout` | partial: minimal_loadout until the GA / bandit |
+| think.rs Bot::look_for_new_tasks. | `think.inc` `think_look_for_new_tasks` | stub |
+| think.rs Bot::do_tasks (the task runner; task_* functions). | `think.inc` `think_do_tasks` | stub |
+| think.rs Bot::learn_items. | `think.inc` `think_learn_items` | stub |
+| think.rs Bot::switch_weapon | `think.inc` `think_switch_weapon` | stub |
+| think.rs Bot::objective_tasks / objective_role / defend_spot / ctb_tasks. | `think.inc` `think_objective_tasks` | stub |
+| think.rs Bot::can_pickup. | `think.inc` `think_can_pickup` | stub |
+| think.rs Bot::facing. | `think.inc` `think_facing` | stub |
+| think.rs is_grenade_rocket / trace_toss. | `think.inc` `think_is_grenade_rocket` | stub |
+
+### tasks.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| Tasks::flush. | `tasks.inc` `tasks_flush` | ported |
+| Tasks::is_empty / len. | `tasks.inc` `tasks_count` | ported |
+| Tasks::current's kind, TASK_NONE for none. | `tasks.inc` `tasks_current_kind` | ported |
+| Task::new + Tasks::add_to_end (AddTask) | `tasks.inc` `tasks_add` | stub |
+| Tasks::add_priority (AddPriorityTask). | `tasks.inc` `tasks_add_priority` | stub |
+| Tasks::add_to_front. | `tasks.inc` `tasks_add_to_front` | stub |
+| Tasks::has_task. | `tasks.inc` `tasks_has` | stub |
+| Tasks::get_task | `tasks.inc` `tasks_find` | stub |
+| Tasks::has_schedule. | `tasks.inc` `tasks_has_schedule` | stub |
+| Tasks::new_schedule_id. | `tasks.inc` `tasks_new_schedule_id` | stub |
+| Tasks::finish_schedule. | `tasks.inc` `tasks_finish_schedule` | stub |
+| Tasks::finish_schedule_desc. | `tasks.inc` `tasks_finish_schedule_desc` | stub |
+| Tasks::give_schedule_description. | `tasks.inc` `tasks_give_schedule_description` | stub |
+| Tasks::set_time_to_complete_schedule. | `tasks.inc` `tasks_set_time_to_complete_schedule` | stub |
+| Tasks::remove_timed_out_schedules. | `tasks.inc` `tasks_remove_timed_out_schedules` | stub |
+| Tasks::remove_similar_task. | `tasks.inc` `tasks_remove_similar` | stub |
+| Tasks::remove_paths. | `tasks.inc` `tasks_remove_paths` | stub |
+| Tasks::finished_current (done or failed; find-path hands its path on). | `tasks.inc` `tasks_finished_current` | stub |
+| Tasks::forget_edict. | `tasks.inc` `tasks_forget_edict` | stub |
+| Task::timed_out. | `tasks.inc` `tasks_timed_out` | stub |
+| TaskKind::description (CBotTask::_getTaskDescription) into out. | `tasks.inc` `tasks_description` | stub |
+
+### goals.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| goals.rs score | `goals.inc` `goals_score` | stub |
+| goals.rs Bot::weapon_value. | `goals.inc` `goals_weapon_value` | stub |
+| goals.rs Bot::powerup_value. | `goals.inc` `goals_powerup_value` | stub |
+| goals.rs Bot::item_value (a KnownItem, items.inc slot). | `goals.inc` `goals_item_value` | stub |
+| goals.rs Bot::danger_near. | `goals.inc` `goals_danger_near` | stub |
+| goals.rs Bot::choose_goal | `goals.inc` `goals_choose` | stub |
+| goals.rs Bot::hold_spot | `goals.inc` `goals_hold_spot` | stub |
+| goals.rs Bot::fight_readiness. | `goals.inc` `goals_fight_readiness` | stub |
+| goals.rs Bot::predict_enemy. | `goals.inc` `goals_predict_enemy` | stub |
+| goals.rs Bot::claim_item_factor. | `goals.inc` `goals_claim_item_factor` | stub |
+| goals.rs Bot::regroup_point. | `goals.inc` `goals_regroup_point` | stub |
+
+### special.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| special.rs Bot::touch (DispatchTouch for a living bot) | `special.inc` `special_touch` | stub |
+| special.rs Bot::player_standing_on_me | `special.inc` `special_player_standing_on_me` | stub |
+| special.rs Bot::standing_on_player | `special.inc` `special_standing_on_player` | stub |
+| special.rs Bot::check_lift. | `special.inc` `special_check_lift` | stub |
+| special.rs Bot::touched_pushable_waypoint. | `special.inc` `special_touched_pushable_waypoint` | stub |
+| special.rs Bot::next_waypoint_tasks. | `special.inc` `special_next_waypoint_tasks` | stub |
+| special.rs Bot::touched_human_tower. | `special.inc` `special_touched_human_tower` | stub |
+| special.rs find_nearest_button | `special.inc` `special_find_nearest_button` | stub |
+| special.rs find_nearest_entity (by classname list), 0 none. | `special.inc` `special_find_nearest_entity` | stub |
+| special.rs player_near_vector, 0 none. | `special.inc` `special_player_near_vector` | stub |
+| special.rs Bot::task_push_pushable (task slot 0). | `special.inc` `special_task_push_pushable` | stub |
+| special.rs Bot::task_wait_for_lift. | `special.inc` `special_task_wait_for_lift` | stub |
+| special.rs Bot::task_wait_for_entity. | `special.inc` `special_task_wait_for_entity` | stub |
+| special.rs Bot::task_human_tower. | `special.inc` `special_task_human_tower` | stub |
+| special.rs Bot::task_wait_for_bot_at_wpt. | `special.inc` `special_task_wait_for_bot_at_wpt` | stub |
+| special.rs Bot::task_face_edict. | `special.inc` `special_task_face_edict` | stub |
+| special.rs Bot::task_throw_grenade. | `special.inc` `special_task_throw_grenade` | stub |
+
+### look.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| think.rs Bot::teleported, look's part | `look.inc` `look_teleported` | ported |
+| think.rs Bot::spawn_init, look's part. | `look.inc` `look_spawn_init` | ported |
+| look.rs Bot::work_view_angles (CBot::WorkViewAngles) | `look.inc` `look_work_view_angles` | stub |
+| look.rs Bot::set_view_angles (CBot::SetViewAngles) | `look.inc` `look_set_view_angles` | stub |
+| look.rs Bot::yaw_angle_to. | `look.inc` `look_yaw_angle_to` | stub |
+| look.rs Bot::dot_from_origin. | `look.inc` `look_dot_from_origin` | stub |
+| look.rs Bot::in_view_cone. | `look.inc` `look_in_view_cone` | stub |
+| look.rs Bot::aim_point (design §4 | `look.inc` `look_aim_point` | stub |
+| look.rs Bot::aim_vector (GetAimVector with the bot's aim error). | `look.inc` `look_aim_vector` | stub |
+| look.rs Bot::turn_to (the aimed turn | `look.inc` `look_turn_to` | stub |
+
+### preaim.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| preaim.rs PreAim::default (a new bot). | `preaim.inc` `preaim_bot_init` | stub |
+| preaim.rs Bot::watch | `preaim.inc` `preaim_watch` | stub |
+| preaim.rs Bot::pre_aim_target. | `preaim.inc` `preaim_target` | stub |
+| preaim.rs Bot::update_pre_aim. | `preaim.inc` `preaim_update` | stub |
+| preaim.rs Bot::pre_aim_look. | `preaim.inc` `preaim_look` | stub |
+
+### combat.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| think.rs Bot::spawn_init, combat's part. | `combat.inc` `combat_spawn_init` | ported |
+| combat.rs Bot::is_visible (IsInVisibleList). the Visibles bits (g_cb_vis_bits) once update_visibles is port... | `combat.inc` `combat_is_visible` | partial |
+| combat.rs Bot::fvisible_point | `combat.inc` `combat_fvisible_point` | ported |
+| combat.rs Bot::is_enemy (players) | `combat.inc` `combat_is_enemy` | partial |
+| combat.rs / mod.rs Bot::new's Visibles and range costs (a new bot). | `combat.inc` `combat_bot_init` | stub |
+| mod.rs Bot::hurt_by (BotEvent HURT for a damage report) | `combat.inc` `combat_hurt_by` | stub |
+| mod.rs Bot::hurt (hurt_origin, fight.attacker, next_get_enemy_time, FaceHurtOrigin). | `combat.inc` `combat_hurt` | stub |
+| combat.rs Bot::fvisible (FVisible | `combat.inc` `combat_fvisible` | stub |
+| combat.rs Bot::update_visibles (the vision pass, vis_update_revs per call). | `combat.inc` `combat_update_visibles` | stub |
+| combat.rs Bot::work_enemy_costs. | `combat.inc` `combat_work_enemy_costs` | stub |
+| combat.rs Bot::find_enemy (FindEnemy) | `combat.inc` `combat_find_enemy` | stub |
+| combat.rs Bot::enemy_found. | `combat.inc` `combat_enemy_found` | stub |
+| combat.rs Bot::enemy_down. | `combat.inc` `combat_enemy_down` | stub |
+| combat.rs Bot::decide_jump_duck_strafe (the decision perceptrons, rl_bot_decide). | `combat.inc` `combat_decide_jump_duck_strafe` | stub |
+| combat.rs Bot::want_to_follow_enemy. | `combat.inc` `combat_want_to_follow_enemy` | stub |
+| combat.rs Bot::run_for_cover. | `combat.inc` `combat_run_for_cover` | stub |
+| combat.rs Bot::flee_grenades (design §4 | `combat.inc` `combat_flee_grenades` | stub |
+| combat.rs Bot::remember_lost_enemy. | `combat.inc` `combat_remember_lost_enemy` | stub |
+| combat.rs Bot::update_conditions. | `combat.inc` `combat_update_conditions` | stub |
+| combat.rs Bot::best_weapon | `combat.inc` `combat_best_weapon` | stub |
+
+### fire.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| think.rs Bot::spawn_init | `fire.inc` `fire_spawn_init` | ported |
+| fire.rs Bot::fire_buttons | `fire.inc` `fire_buttons` | partial |
+| fire.rs Bot::capped_speeds | `fire.inc` `fire_capped_speeds` | partial |
+| fire.rs Bot::track_shots (count shots by clip for the recoil penalty). | `fire.inc` `fire_track_shots` | stub |
+| fire.rs Bot::safe_to_reload. | `fire.inc` `fire_safe_to_reload` | stub |
+| fire.rs Bot::in_aim. | `fire.inc` `fire_in_aim` | stub |
+| fire.rs Bot::spread_limit. | `fire.inc` `fire_spread_limit` | stub |
+| fire.rs Bot::ready_to_fire. | `fire.inc` `fire_ready_to_fire` | stub |
+| fire.rs Bot::combat_move. | `fire.inc` `fire_combat_move` | stub |
+| fire.rs Bot::dodge. | `fire.inc` `fire_dodge` | stub |
+| fire.rs Bot::saw_enemy. | `fire.inc` `fire_saw_enemy` | stub |
+| fire.rs Bot::enemy_out_of_sight. | `fire.inc` `fire_enemy_out_of_sight` | stub |
+| fire.rs Bot::lost_aim_point. | `fire.inc` `fire_lost_aim_point` | stub |
+| fire.rs Bot::hold_angle. | `fire.inc` `fire_hold_angle` | stub |
+| fire.rs Bot::threat (who to fight first). | `fire.inc` `fire_threat` | stub |
+| fire.rs Bot::weapon_score. | `fire.inc` `fire_weapon_score` | stub |
+| fire.rs Bot::learned_score (rl_ws_score). | `fire.inc` `fire_learned_score` | stub |
+| fire.rs Bot::best_scored_weapon | `fire.inc` `fire_best_scored_weapon` | stub |
+| fire.rs Bot::choose_weapon. | `fire.inc` `fire_choose_weapon` | stub |
+| fire.rs Bot::use_powerup. | `fire.inc` `fire_use_powerup` | stub |
+| fire.rs Bot::grenade_behind_cover. | `fire.inc` `fire_grenade_behind_cover` | stub |
+| fire.rs throw_pitch | `fire.inc` `fire_throw_pitch` | stub |
+
+### botweapons.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| mod.rs Bot::weapon_select_failed | `botweapons.inc` `botweapons_select_failed` | ported |
+| think.rs Bot::frame | `botweapons.inc` `botweapons_ensure_kungfu` | ported |
+| think.rs Bot::spawn_init's weapon part | `botweapons.inc` `botweapons_spawn_init` | ported |
+| BotWeapons::add (SetWeapon) | `botweapons.inc` `botweapons_add` | partial |
+| BotWeapons::remove. | `botweapons.inc` `botweapons_remove` | ported |
+| BotWeapons::has. | `botweapons.inc` `botweapons_has` | ported |
+| mod.rs Bot::new's BotWeapons::default (a new bot). | `botweapons.inc` `botweapons_bot_init` | partial |
+| think.rs Bot::frame's weapon block | `botweapons.inc` `botweapons_frame_sync` | stub |
+| bot/weapons.rs BotWeapons::best_loaded_gun | `botweapons.inc` `botweapons_best_loaded_gun` | stub |
+| bot/weapons.rs BotWeapons::weapon_info (+ record) | `botweapons.inc` `botweapons_weapon_info` | stub |
+| bot/weapons.rs BotWeapons::sync_inventory (from world_inventory). | `botweapons.inc` `botweapons_sync_inventory` | stub |
+| bot/weapons.rs BotWeapons::best_weapon_id | `botweapons.inc` `botweapons_best_weapon_id` | stub |
+| bot/weapons.rs BotWeapon::is_melee (no info counts as melee). | `botweapons.inc` `botweapons_is_melee` | stub |
+| bot/weapons.rs BotWeapon::clip_is_empty. | `botweapons.inc` `botweapons_clip_is_empty` | stub |
+| bot/weapons.rs BotWeapon::out_of_ammo. | `botweapons.inc` `botweapons_out_of_ammo` | stub |
+| bot/weapons.rs BotWeapon::low_on_ammo (TS | `botweapons.inc` `botweapons_low_on_ammo` | stub |
+| bot/weapons.rs BotWeapon::can_reload. | `botweapons.inc` `botweapons_can_reload` | stub |
+| bot/weapons.rs BotWeapon::need_to_reload. | `botweapons.inc` `botweapons_need_to_reload` | stub |
+| bot/weapons.rs BotWeapon::can_shoot_primary. | `botweapons.inc` `botweapons_can_shoot_primary` | stub |
+| mod.rs Bot::reload | `botweapons.inc` `botweapons_reload` | stub |
+
+### weapons.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| host lib.rs game_init | `weapons.inc` `weapons_read_presets` | stub |
+| weapons/mod.rs Weapons::clear (ServerActivate). | `weapons.inc` `weapons_clear` | stub |
+| weapons/mod.rs Weapons::add (from the preset). | `weapons.inc` `weapons_add` | stub |
+| weapons/mod.rs WeaponInfo::primary_in_range. | `weapons.inc` `weapons_primary_in_range` | stub |
+| weapons/mod.rs WeaponInfo::secondary_in_range. | `weapons.inc` `weapons_secondary_in_range` | stub |
+
+### tsweapons.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| TsWeapon::from_game_id | `tsweapons.inc` `ts_weapon_from_game_id` | ported |
+| The game's id of an RCBot id (ts_bot_select_weapon, ts_bot_buy). | `tsweapons.inc` `ts_weapon_to_game_id` | ported |
+| ts_data.rs gun_data | `tsweapons.inc` `tsweapons_init` | stub |
+| ts_data.rs GunData::needs_fresh_press. | `tsweapons.inc` `tsweapons_needs_fresh_press` | stub |
+| ts_data.rs GunData::press_interval. | `tsweapons.inc` `tsweapons_press_interval` | stub |
+| ts_data.rs GunData::range_multiplier. | `tsweapons.inc` `tsweapons_range_multiplier` | stub |
+| ts_data.rs GunData::grow_penalty | `tsweapons.inc` `tsweapons_grow_penalty` | stub |
+| ts_data.rs decay_penalty. | `tsweapons.inc` `tsweapons_decay_penalty` | stub |
+
+### movement.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| movement.rs Bot::run_player_move (CBot::RunPlayerMove) | `movement.inc` `movement_run_player_move` | ported |
+| mod.rs Bot::jump / duck / use_button / alt_button. | `movement.inc` `movement_jump` | ported |
+|  | `movement.inc` `movement_duck` | ported |
+|  | `movement.inc` `movement_use` | ported |
+|  | `movement.inc` `movement_alt` | ported |
+| mod.rs Bot::primary_attack | `movement.inc` `bot_primary_attack` | ported |
+| mod.rs Bot::secondary_attack. | `movement.inc` `bot_secondary_attack` | ported |
+| mod.rs Bot::stop_moving. | `movement.inc` `movement_stop_moving` | ported |
+| mod.rs Bot::set_move_vector. | `movement.inc` `movement_set_move_vector` | ported |
+| mod.rs Bot::duck_and_jump. | `movement.inc` `movement_duck_and_jump` | ported |
+| mod.rs Bot::jump_and_duck. | `movement.inc` `movement_jump_and_duck` | ported |
+| think.rs Bot::teleported, movement's part | `movement.inc` `movement_teleported` | ported |
+|  | `movement.inc` `movement_reset_unstick` | ported |
+| think.rs Bot::spawn_init, movement's part. | `movement.inc` `movement_spawn_init` | ported |
+| movement.rs Bot::work_move_direction (move_to → move/strafe speeds, avoidance, ladders, water). | `movement.inc` `movement_work_move_direction` | stub |
+| movement.rs Bot::check_stuck (+ react_to_stuck, give_up_stuck). | `movement.inc` `movement_check_stuck` | stub |
+| movement.rs Bot::stunt_ready. | `movement.inc` `movement_stunt_ready` | stub |
+| movement.rs Bot::dive (TS's +alt1 stunt on its own). | `movement.inc` `movement_dive` | stub |
+| movement.rs Bot::dive_landing. | `movement.inc` `movement_dive_landing` | stub |
+| mod.rs Bot::climb_type (GetClimbType, TS's cases). | `movement.inc` `movement_climb_type` | ported |
+| mod.rs Bot::ladder_dir (1 up, -1 down, 0 stay). | `movement.inc` `movement_ladder_dir` | stub |
+
+### navigate.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| mod.rs Bot::new's AStar / AStarBot / Explore | `navigate.inc` `navigate_bot_init` | ported |
+| The bot left | `navigate.inc` `navigate_bot_free` | ported |
+| think.rs Bot::teleported, navigation's part | `navigate.inc` `navigate_teleported` | ported |
+| think.rs Bot::spawn_init, navigation's part (paths.bot_paths cleared, next_clear_failed_goals 0). spawn_ini... | `navigate.inc` `navigate_spawn_init` | partial |
+| mod.rs Bot::next_waypoint (GetNextWaypoint) | `navigate.inc` `navigate_next_waypoint` | ported |
+| host commands.rs load_waypoints (nav_load("")) and bots.rs load_heatmap (nav_heatmap_load | `navigate.inc` `navigate_load_map` | stub |
+| bots.rs save_globals' heatmap (nav_heatmap_save). From plugin_end. | `navigate.inc` `navigate_save_map` | stub |
+| host editor.rs frame (nav_auto_waypoint / nav_draw_around for editing players, sending nav_event_pop's beam... | `navigate.inc` `navigate_editor_frame` | stub |
+| think.rs Think's failed-goal upkeep (nav_path_think), each think. | `navigate.inc` `navigate_think` | stub |
+| navigate.rs Bot::update_waypoint (touch by flag distance, nav_path_touch, next waypoint, special waypoints,... | `navigate.inc` `navigate_update_waypoint` | stub |
+| navigate.rs Bot::find_next_waypoint (nav_path_pop / nav_path_next). | `navigate.inc` `navigate_find_next_waypoint` | stub |
+| navigate.rs Bot::nearest_waypoint (nav_nearest with the failed goals). | `navigate.inc` `navigate_nearest_waypoint` | stub |
+| navigate.rs Bot::roam_goal (nav_path_roam_goal with the team's claims). | `navigate.inc` `navigate_roam_goal` | stub |
+| navigate.rs Bot::claim_factor. | `navigate.inc` `navigate_claim_factor` | stub |
+| navigate.rs Bot::search_path and think.rs task_find_path | `navigate.inc` `navigate_search_path` | stub |
+| navigate.rs Bot::threat_waypoints → nav_path_set_threats / nav_path_add_threat. | `navigate.inc` `navigate_update_threats` | stub |
+| navigate.rs Bot::crowded_waypoints → nav_path_crowd_from (teammates' paths). | `navigate.inc` `navigate_update_crowding` | stub |
+| navigate.rs Bot::claim (board.inc claims). | `navigate.inc` `navigate_claim` | stub |
+| navigate.rs Bot::share_with_team (board.inc posts | `navigate.inc` `navigate_share_with_team` | stub |
+| navigate.rs Bot::search_move. | `navigate.inc` `navigate_search_move` | stub |
+| navigate.rs Bot::fail_path (nav_path_fail). | `navigate.inc` `navigate_fail_path` | stub |
+| navigate.rs Bot::scan_fov. | `navigate.inc` `navigate_scan_fov` | stub |
+| navigate.rs Bot::wall_on_side. | `navigate.inc` `navigate_wall_on_side` | stub |
+| navigate.rs Bot::got_stuck. | `navigate.inc` `navigate_got_stuck` | stub |
+| mod.rs Bot::go_to_waypoint (util bot_goto | `navigate.inc` `navigate_go_to_waypoint` | stub |
+| manager.rs player_waypoint / update_heatmap | `navigate.inc` `navigate_heatmap_damage` | stub |
+|  | `navigate.inc` `navigate_heatmap_kill` | ported |
+
+### remember.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| RememberPositions::default (a new bot). | `remember.inc` `remember_bot_init` | stub |
+| RememberPositions::forget (manager.rs death | `remember.inc` `remember_forget` | stub |
+| RememberPositions::add (replaces by entity, keeps 8). | `remember.inc` `remember_add` | stub |
+| RememberPositions::tick. | `remember.inc` `remember_tick` | stub |
+| RememberPositions::hunted. | `remember.inc` `remember_hunted` | stub |
+| RememberPositions::newest | `remember.inc` `remember_newest` | stub |
+| RememberPositions::nearest | `remember.inc` `remember_nearest` | stub |
+| RememberPositions::clear. | `remember.inc` `remember_clear` | stub |
+
+### hearing.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| hearing.rs Hearing::default (a new bot). | `hearing.inc` `hearing_bot_init` | stub |
+| events.rs SoundKind::of_sample filtered by is_heard | `hearing.inc` `hearing_sound_kind` | stub |
+| events.rs Bot::hear_sound. | `hearing.inc` `hearing_hear_sound` | stub |
+| think.rs Bot::hear_gunfire (the port's weapon_fired). | `hearing.inc` `hearing_hear_gunfire` | stub |
+| hearing.rs Hearing::add (merges a sound within SAME_SOUND). | `hearing.inc` `hearing_add` | stub |
+| hearing.rs Hearing::tick (drops sounds older than HEARD_FOR). | `hearing.inc` `hearing_tick` | stub |
+| hearing.rs Hearing::investigate. | `hearing.inc` `hearing_investigate` | stub |
+| hearing.rs Hearing::newest_new | `hearing.inc` `hearing_newest_new` | stub |
+
+### items.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| ItemMemory::default (a new bot). | `items.inc` `items_bot_init` | stub |
+| think.rs Bot::item_taken (the port's item_pickup) | `items.inc` `items_taken` | stub |
+| ItemMemory::scan (the list now and then). | `items.inc` `items_scan` | stub |
+| ItemMemory::look (the items in view | `items.inc` `items_look` | stub |
+| ItemMemory::get | `items.inc` `items_find` | stub |
+| ItemMemory::untakeable. | `items.inc` `items_untakeable` | stub |
+| ItemMemory::ignored. | `items.inc` `items_ignored` | stub |
+| ItemMemory::touched. | `items.inc` `items_touched` | stub |
+
+### board.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| TeamBoards::died | `board.inc` `board_died` | stub |
+| TeamBoards::clear (map change). | `board.inc` `board_clear` | stub |
+| TeamBoard::sight. | `board.inc` `board_sight` | stub |
+| TeamBoard::hear. | `board.inc` `board_hear` | stub |
+| TeamBoard::claim. | `board.inc` `board_claim` | stub |
+| TeamBoard::post (position and path). | `board.inc` `board_post` | stub |
+| TeamBoard::leave. | `board.inc` `board_leave` | stub |
+| TeamBoard::expire. | `board.inc` `board_expire` | stub |
+
+### kungfu.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| kungfu.rs KungFu::new (a new bot | `kungfu.inc` `kungfu_bot_init` | stub |
+| think.rs spawn_init's kungfu part | `kungfu.inc` `kungfu_spawn_init` | stub |
+| host bots.rs new_bot | `kungfu.inc` `kungfu_load` | stub |
+| host bots.rs save_bot | `kungfu.inc` `kungfu_save` | stub |
+| kungfu.rs Bot::kungfu_fight | `kungfu.inc` `kungfu_fight` | stub |
+| kungfu.rs Bot::kf_settle | `kungfu.inc` `kungfu_settle` | stub |
+| kungfu.rs Bot::kungfu_face | `kungfu.inc` `kungfu_face` | stub |
+| kungfu.rs KungFu::fighting. | `kungfu.inc` `kungfu_fighting` | stub |
+| kungfu.rs KungFu::opponent | `kungfu.inc` `kungfu_opponent` | stub |
+| kungfu.rs is_ranged (a gun, not a blade or kung fu). | `kungfu.inc` `kungfu_is_ranged` | stub |
+
+### learning.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| host lib.rs game_init | `learning.inc` `learning_load_globals` | stub |
+| host bots.rs save_globals | `learning.inc` `learning_save_globals` | stub |
+| host bots.rs new_bot | `learning.inc` `learning_bot_load` | stub |
+| host bots.rs save_bot | `learning.inc` `learning_bot_save` | stub |
+| free the handle (rl_bot_free) when the bot leaves. | `learning.inc` `learning_bot_free` | stub |
+| think.rs Think's death | `learning.inc` `learning_on_death` | stub |
+| think.rs spawn_init | `learning.inc` `learning_on_spawn` | stub |
+| learning.rs Bot::learn_think (exposure, shots, ledger tick). | `learning.inc` `learning_think` | stub |
+| learning.rs Bot::choose_loadout (the bandit's pick, rl_loadout_choose) | `learning.inc` `learning_choose_loadout` | stub |
+| manager.rs combat_event for a damage | `learning.inc` `learning_damage_event` | stub |
+| manager.rs combat_event for a kill (KillEvent | `learning.inc` `learning_kill_event` | stub |
+| manager.rs player_stunt (rl_opp_stunt; tsfun's client_stunt). | `learning.inc` `learning_player_stunt` | stub |
+| learning.rs Bot::learned_threat (rl_opp_threat). | `learning.inc` `learning_learned_threat` | stub |
+| learning.rs Bot::waypoint_danger (the heatmap, rcbot_nav). | `learning.inc` `learning_waypoint_danger` | stub |
+| learning.rs Bot::learned_weapon_score (rl_ws_score) | `learning.inc` `learning_weapon_score` | stub |
+
+### squad.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| manager.rs apply_squad_orders | `squad.inc` `squad_apply_orders` | stub |
+| Squads::update_angles | `squad.inc` `squad_update_angles` | stub |
+| host bots.rs flush_squad_messages (ClientPrint HUD_PRINTTALK to leaders). | `squad.inc` `squad_flush_messages` | stub |
+| Squads::clear (map change). | `squad.inc` `squad_clear` | stub |
+| host bots.rs disconnect | `squad.inc` `squad_player_left` | stub |
+| Bot::squad_think. | `squad.inc` `squad_think` | stub |
+| Bot::can_add_to_squad. | `squad.inc` `squad_can_add` | stub |
+| Bot::add_to_squad. | `squad.inc` `squad_add` | stub |
+| Bot::remove_my_squad. | `squad.inc` `squad_remove_mine` | stub |
+| Bot::squad_modes. | `squad.inc` `squad_modes` | stub |
+| Bot::follow_formation | `squad.inc` `squad_follow_formation` | stub |
+| Bot::update_squad_conditions. | `squad.inc` `squad_update_conditions` | stub |
+| Bot::squad_enemy_found. | `squad.inc` `squad_enemy_found` | stub |
+| Bot::see_leader_again. | `squad.inc` `squad_see_leader_again` | stub |
+| Bot::task_follow_leader. | `squad.inc` `squad_task_follow_leader` | stub |
+| host bots.rs remove_all_bot_squads (BotMenu_Func_Squad_RemoveAllBotSquads) | `squad.inc` `squad_remove_all_bot_squads` | stub |
+
+### botcam.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| host bots.rs botcam_frame (StartFrame's m_BotCam.Think / Spawn). | `botcam.inc` `botcam_frame` | stub |
+| manager.rs frame | `botcam.inc` `botcam_set_other_has_enemy` | stub |
+| BotCam::clear (ServerActivate / Deactivate). | `botcam.inc` `botcam_clear` | stub |
+| host bots.rs botcam_tune_in (TuneIn) | `botcam.inc` `botcam_tune_in` | stub |
+
+### events.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| events.rs Bot::forget_greeting | `events.inc` `events_forget_greeting` | ported |
+| BotEvent::Leaving (it says goodbye). | `events.inc` `events_leaving` | stub |
+| BotEvent::KillSelf. | `events.inc` `events_kill_self` | stub |
+| BotEvent::Kill (event_kill). | `events.inc` `events_kill` | stub |
+| BotEvent::Died (event_died) | `events.inc` `events_died` | stub |
+| BotEvent::SeeTeammateDie. | `events.inc` `events_see_teammate_die` | stub |
+| BotEvent::SeePlayerDie. | `events.inc` `events_see_player_die` | stub |
+| BotEvent::SeeTeammateKill (does nothing upstream). | `events.inc` `events_see_teammate_kill` | stub |
+| BotEvent::SeeEnemyKill. | `events.inc` `events_see_enemy_kill` | stub |
+| BotEvent::HearTeammateDie. | `events.inc` `events_hear_teammate_die` | stub |
+| Bot::want_to_leave_game. | `events.inc` `events_want_to_leave_game` | stub |
+| Bot::having_fun. | `events.inc` `events_having_fun` | stub |
+| Bot::getting_bored. | `events.inc` `events_getting_bored` | stub |
+| Bot::task_type_message (BOT_TASK_TYPE_MESSAGE | `events.inc` `events_task_type_message` | stub |
+
+### chat.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| globals.cpp SetupBotChat | `chat.inc` `chat_init` | stub |
+| host bots.rs wake_hal | `chat.inc` `chat_wake_hal` | stub |
+| host bots.rs save_bot | `chat.inc` `chat_save_hal` | stub |
+| free the brain (hal_free) when the bot leaves. | `chat.inc` `chat_free_hal` | stub |
+| host bots.rs greet (BotFunc_AddBot's greeting), if CFG_CHATTING. | `chat.inc` `chat_greet` | stub |
+| events.rs Bot::bot_chat (chat_pick into a TYPE_MESSAGE task, or say now). | `chat.inc` `chat_bot_chat` | stub |
+| events.rs Bot::reply_to_message (hal_bot_reply on the shared buffer). | `chat.inc` `chat_reply_to_message` | stub |
+| host bots.rs say_command (say / say_team | `chat.inc` `chat_say_command` | stub |
+
+### config.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| config/mod.rs Config::default | `config.inc` `config_defaults` | ported |
+| Config::is_on (IsConfigSettingOn). | `config.inc` `config_is_on` | ported |
+| Config::change_setting (ChangeConfigSetting) | `config.inc` `config_change_setting` | ported |
+| Config::is_debug_on (IsDebugLevelOn). | `config.inc` `config_is_debug_on` | ported |
+| config/file.rs read_config + commands.rs run_config | `config.inc` `config_read` | stub |
+| host lib.rs map_config_frame | `config.inc` `config_map_config_frame` | stub |
+| host lib.rs server_activate's map config read (into a line queue). | `config.inc` `config_read_map_config` | stub |
+
+### commands.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| lib.rs TSRS_PluginLoad's register_command(BOT_COMMAND_ACCESS) | `commands.inc` `commands_init` | ported |
+| commands.rs server_command. | `commands.inc` `commands_server_rcbot` | ported |
+| commands.rs client_command (with the users' access levels, bot_users.ini). access checks (users.inc), menus... | `commands.inc` `commands_client_rcbot` | partial |
+| commands.rs ts_team_choice | `commands.inc` `commands_ts_team_choice` | stub |
+| host bots.rs force_grip_frame (CClient::Think's force grip), every frame. | `commands.inc` `commands_force_grip_frame` | stub |
+| host bots.rs disconnect | `commands.inc` `commands_force_grip_release_player` | stub |
+
+### menu.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| Menu::show | `menu.inc` `menu_show` | stub |
+| menu.rs activate | `menu.inc` `menu_select` | stub |
+
+### profile.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| BotProfile::init (BotFunc_InitProfile) | `profile.inc` `profile_init` | ported |
+| host bots.rs profile_for | `profile.inc` `profile_for` | ported |
+| A bot in the game (other than slot except) uses profile pid. | `profile.inc` `profile_in_use` | ported |
+| parse_profile_list | `profile.inc` `profile_parse_list` | partial |
+| BotProfile::read over botprofiles/<pid>.ini | `profile.inc` `profile_read` | partial |
+
+### rep.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| host bots.rs new_bot | `rep.inc` `rep_load_all` | stub |
+| host bots.rs put_in_server | `rep.inc` `rep_add_load` | stub |
+| host bots.rs disconnect | `rep.inc` `rep_remove_save` | stub |
+| Reputations::client_rep | `rep.inc` `rep_of` | stub |
+| Reputations::increase_rep. | `rep.inc` `rep_increase` | stub |
+| Reputations::decrease_rep. | `rep.inc` `rep_decrease` | stub |
+| Reputations::average_rep_on_server. | `rep.inc` `rep_average_on_server` | stub |
+
+### users.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| users.rs AllowedPlayers::read_users over bot_users.ini. Called from plugin_cfg. | `users.inc` `users_read` | stub |
+| users.rs AllowedPlayers::get_player's access level for a client, 0 none. | `users.inc` `users_access` | stub |
+
+### client.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| Clients::connect (CClients::ClientConnected) | `client.inc` `clients_connect` | stub |
+| Clients::disconnect. | `client.inc` `clients_disconnect` | stub |
+
+### manager.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| ts_frame | `manager.inc` `manager_frame` | ported |
+| BotManager::frame | `manager.inc` `manager_think_all` | ported |
+| Bot::is_alive | `manager.inc` `bot_alive` | ported |
+| think.rs Bot::frame | `manager.inc` `manager_bot_frame` | ported |
+| The rest of lib.rs start_frame | `manager.inc` `manager_act_all` | ported |
+|  | `manager.inc` `manager_run_action` | ported |
+| Action::Command | `manager.inc` `bot_action_command` | ported |
+| Action::SelectWeapon | `manager.inc` `bot_action_select_weapon` | ported |
+| Action::Loadout | `manager.inc` `bot_action_loadout` | ported |
+| Action::Kill (ClientKill). | `manager.inc` `bot_action_kill` | ported |
+| Action::Kick. | `manager.inc` `bot_action_kick` | ported |
+| Bot::command_ran | `manager.inc` `bot_command_ran` | ported |
+| Bot::teleported | `manager.inc` `bot_teleported` | ported |
+| BotManager::death (BotClient_Generic_DeathMessage) | `manager.inc` `manager_death` | ported |
+| BotManager::combat_event for a damage (the port's damage event, design §4) | `manager.inc` `manager_damage` | ported |
+| BotManager::sound (pfnEmitSound's loop) | `manager.inc` `manager_sound` | ported |
+| BotManager::touch (DispatchTouch) | `manager.inc` `manager_touch` | ported |
+| BotManager::item_pickup | `manager.inc` `manager_item_pickup` | ported |
+| BotManager::weapon_fired | `manager.inc` `manager_weapon_fired` | ported |
+| BotManager::make_squad (BotFunc_MakeSquad) | `manager.inc` `manager_make_squad` | ported |
+| BotManager::say (ClientCommand's say/say_team) | `manager.inc` `manager_say` | ported |
+| Every subsystem's CBot::Init part for a new bot (after state_clear_bot and the profile). | `manager.inc` `manager_bot_init` | ported |
+
+### backend.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| plugin_init | `backend.inc` `backend_register` | ported |
+|  | `backend.inc` `ts_bot_activate` | ported |
+|  | `backend.inc` `ts_bot_deactivate` | ported |
+| addbot, addcustombot, the quota. | `backend.inc` `ts_bot_add` | ported |
+| A bot the engine kept across the level change | `backend.inc` `ts_bot_adopt` | ported |
+| lib.rs create | `backend.inc` `backend_create` | ported |
+|  | `backend.inc` `backend_copy_profile` | ported |
+| bots.rs new_bot | `backend.inc` `backend_new_bot` | ported |
+| bots.rs save_bot | `backend.inc` `backend_save_bot` | ported |
+| The slot's bot is gone | `backend.inc` `backend_remove_bot` | ported |
+| lib.rs save_all | `backend.inc` `backend_save_all` | ported |
+| previous_profiles across the plugin reload | `backend.inc` `backend_store_prev_profiles` | ported |
+|  | `backend.inc` `backend_load_prev_profiles` | ported |
+| commands.rs Host::add_bot (rcbot addbot, the rejoin code) | `backend.inc` `backend_add_bot_now` | ported |
+| lib.rs rejoin_frame (StartFrame's rejoin part) | `backend.inc` `backend_rejoin_frame` | ported |
+| bots.rs put_in_server (CClients::ClientConnected) | `backend.inc` `backend_put_in_server` | ported |
+| bots.rs disconnect (ClientDisconnect, CClients::ClientDisconnected) | `backend.inc` `backend_disconnect` | ported |
+
+### world.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| plugin_init | `world.inc` `world_init` | ported |
+|  | `world.inc` `world_end` | ported |
+| world.rs refresh_frame | `world.inc` `world_refresh_frame` | ported |
+| lib.rs read_masters | `world.inc` `world_read_masters` | ported |
+|  | `world.inc` `world_userid` | ported |
+|  | `world.inc` `world_flags` | ported |
+| PlayerState::alive | `world.inc` `world_alive` | ported |
+| The rules team, 1.. in teamplay, 0 none. | `world.inc` `world_team` | ported |
+|  | `world.inc` `world_origin` | ported |
+|  | `world.inc` `world_velocity` | ported |
+|  | `world.inc` `world_vangle` | ported |
+| GetGunPosition | `world.inc` `world_eyes` | ported |
+| Entity::entity_origin for a player | `world.inc` `world_player_center` | ported |
+|  | `world.inc` `world_health` | ported |
+|  | `world.inc` `world_armor` | ported |
+| The weapon in hand, the game's id (0 kung fu). | `world.inc` `world_weapon` | ported |
+|  | `world.inc` `world_clip` | ported |
+|  | `world.inc` `world_ammo` | ported |
+|  | `world.inc` `world_frags` | ported |
+|  | `world.inc` `world_field` | ported |
+|  | `world.inc` `world_combat` | ported |
+|  | `world.inc` `world_is_bot` | ported |
+| BotWorld::teamplay | `world.inc` `world_teamplay` | ported |
+| BotWorld::model_teams | `world.inc` `world_model_teams` | ported |
+| ts_get_gamestate, once per frame. | `world.inc` `world_gamestate` | ported |
+|  | `world.inc` `world_cvar_gravity` | ported |
+| BotWorld::map_items | `world.inc` `world_items` | ported |
+|  | `world.inc` `world_item_field` | ported |
+|  | `world.inc` `world_item_origin` | ported |
+| BotWorld::inventory | `world.inc` `world_inventory` | ported |
+|  | `world.inc` `world_inventory_field` | ported |
+|  | `world.inc` `world_owns` | ported |
+| Entity::entity_origin (BotWorld::entity_glance), cached for the frame | `world.inc` `world_entity_origin` | ported |
+| nav World::trace_line (UTIL_TraceLine) | `world.inc` `world_trace_line` | ported |
+| BotWorld::trace_point_hull (pfnTraceHull, point hull 0). | `world.inc` `world_trace_hull` | ported |
+| nav World::point_contents (CONTENTS_*). | `world.inc` `world_point_contents` | ported |
+| BotWorld::in_pvs | `world.inc` `world_in_pvs` | ported |
+| BotWorld::entities_in_sphere (UTIL_FindEntityInSphere, every match) | `world.inc` `world_entities_in_sphere` | ported |
+
+### files.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| plugin_init, after ts_bot_register_backend (tsx makes the backend folder then). | `files.inc` `files_init` | ported |
+| <rcbot dir><rel> into out. | `files.inc` `files_path` | ported |
+| The file to read for rel | `files.inc` `files_find` | ported |
+| Reads a whole small text file (an ini) into out; returns its length, -1 if missing. | `files.inc` `files_read_text` | ported |
+
+### math.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+|  | `math.inc` `vec_set` | ported |
+|  | `math.inc` `vec_copy` | ported |
+|  | `math.inc` `vec_zero` | ported |
+|  | `math.inc` `vec_is_zero` | ported |
+| out = a - b | `math.inc` `vec_sub` | ported |
+| out = a + b | `math.inc` `vec_add` | ported |
+| out = a + b * s | `math.inc` `vec_mad` | ported |
+|  | `math.inc` `vec_scale` | ported |
+| math.rs Vector::length | `math.inc` `vec_length` | ported |
+|  | `math.inc` `vec_length_2d` | ported |
+|  | `math.inc` `vec_distance` | ported |
+|  | `math.inc` `vec_distance_2d` | ported |
+| math.rs Vector::normalize | `math.inc` `vec_normalize` | ported |
+| look.rs dot | `math.inc` `vec_dot` | ported |
+| look.rs fix_float_angle | `math.inc` `fix_float_angle` | ported |
+| look.rs fix_angles | `math.inc` `fix_angles` | ported |
+| look.rs angle_diff | `math.inc` `angle_diff` | ported |
+| look.rs vec_to_angles | `math.inc` `vec_to_angles` | ported |
+| look.rs make_vectors | `math.inc` `make_vectors` | ported |
+| look.rs change_angles | `math.inc` `change_angles` | ported |
+|  | `math.inc` `fclamp` | ported |
+|  | `math.inc` `fmin` | ported |
+|  | `math.inc` `fmax` | ported |
+
+### report.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+|  | `report.inc` `report_init` | ported |
+| plugin_cfg and every check | `report.inc` `report_refresh_mode` | ported |
+|  | `report.inc` `report_check_pass` | ported |
+| ts_bot_activate came. | `report.inc` `report_backend_active` | ported |
+|  | `report.inc` `report_bot_added` | ported |
+|  | `report.inc` `report_spawned` | ported |
+|  | `report.inc` `report_fired` | ported |
+|  | `report.inc` `report_runcmd` | ported |
+| lib.rs report | `report.inc` `report_frame` | ported |
+
+### minimal.inc
+
+| Rust (tsmod-rcbot-rs) | Pawn | Status |
+|---|---|---|
+| The loadout bought for the next life | `minimal.inc` `minimal_loadout` | placeholder |
+|  | `minimal.inc` `minimal_think_alive` | placeholder |

@@ -26,11 +26,15 @@ and plugin authors can change the bot's behaviour in Pawn:
     auto-waypointer (`rcbot::nav::editor` over an engine-backed `BotWorld`, `src/world.rs`). Also
     a metamod plugin, for the engine table (traces, point contents, entities) and `StartFrame`
     (missing visibility rows, traced a few per frame). Done, not run on a server yet.
-* **The bot logic as a Pawn plugin**, `scripting/rcbot_amxx.sma` (later phase): think, tasks,
+* **The bot logic as a Pawn plugin**, `scripting/rcbot_amxx.sma` + `scripting/rcbot/*.inc`
+  (one file per Rust module; skeleton in place, subsystems being ported): think, tasks,
   combat, kung fu, squads, chat decisions; it registers with the port as bot backend
-  `rcbot_amxx` (`ts_bot_backend rcbot_amxx`). It calls the modules' natives where the Rust bot
-  calls `rcbot::chat` / `rcbot::learn` (see `crates/learn/src/natives.rs` for the mapping from
-  `bot/learning.rs`, `think.rs`, `combat.rs`, `manager.rs`).
+  `rcbot_amxx` (`ts_bot_backend rcbot_amxx`) through tsx's `tsbot.inc` (tsmod-amxx-rs v0.3.0).
+  It calls the modules' natives where the Rust bot calls `rcbot::chat` / `rcbot::learn` /
+  `rcbot::nav` (see `crates/learn/src/natives.rs` for the mapping from `bot/learning.rs`,
+  `think.rs`, `combat.rs`, `manager.rs`). **Read [docs/pawn.md](docs/pawn.md) before touching
+  `scripting/`** (data layout, performance rules, file ownership); the function map is
+  [docs/design.md](docs/design.md).
 * `crates/common` (`rcbot-amxx-common`, an rlib): handle tables, the data directory with atomic
   writes, the module's random numbers, cell/float/string helpers.
 
@@ -67,7 +71,9 @@ crates/nav/      rcbot_nav module + metamod plugin: src/natives.rs, src/paths.rs
                  src/world.rs (EngineWorld: rcbot's World/BotWorld on amxx::engine), src/tests.rs, src/ffi.rs
 include/         rcbot_megahal.inc, rcbot_learn.inc, rcbot_nav.inc (shipped in dist)
 scripting/       Pawn plugins; scripting/test/rcbot_modules_smoke.sma calls every native
-xtask/           cargo xtask build | dist | lint | test | pawn | e2e (e2e: TODO)
+scripting/rcbot_amxx.sma, scripting/rcbot/   the Pawn bot (docs/pawn.md)
+docs/            pawn.md (Pawn conventions, ownership), design.md (Rust -> Pawn map)
+xtask/           cargo xtask build | dist | lint | test | pawn | e2e (src/e2e.rs)
 ```
 
 1. **No `unsafe` in this repository** except what `amxx::export_module!`, `amxx::export_metamod!`
@@ -116,10 +122,17 @@ cargo xtask pawn                 # amxxpc on scripting/**/*.sma (include/ first;
 `~/dev/hl/ref/extracted/amxmodx-1.10.0-git5487-linux/addons/amxmodx/scripting`). amxxpc needs its
 own directory on `LD_LIBRARY_PATH` (xtask sets it).
 
-`cargo xtask e2e` is a TODO: model it on tsmod-amxx-rs's (the amxx-testenv roots under
-`~/games/amxx_rehlds_{linux,win}`, built by `../ref/amxx-testenv/setup.sh`), once the Pawn bot
-exists. The `~/games` roots are shared: never start servers there outside an e2e run, and stop
-them with the testenv's `stop.sh`.
+`TSMOD_AMXX_INCLUDE` names tsmod-amxx-rs's include directory (tsbot.inc; default
+`~/dev/hl/tsmod-amxx-rs/include`; CI unpacks the v0.3.0 release's), searched after `include/` and
+before AMX Mod X's.
+
+`cargo xtask e2e [linux] [win]` (`xtask/src/e2e.rs`) runs rcbot_amxx on the amxx-testenv roots
+(`~/games/amxx_rehlds_{linux,win}`, built by `../ref/amxx-testenv/setup.sh`): dist, the plugin,
+tsx/tsfun from `../tsmod-amxx-rs/dist` (its `cargo xtask dist` when missing), ts_dojo with
+`ts_bot_backend rcbot_amxx` and `ts_bot_quota 0`, 2 `addbot` + 2 `rcbot addbot`, then the
+plugin's `CHECK` lines (`logs/rcbot_amxx_e2e.log`) and the error logs; it restores the configs it
+changed. The `~/games` roots are shared: never start servers there outside an e2e run (and run
+e2e only when nothing else uses them), and stop them with the testenv's `stop.sh`.
 
 Before calling a change done: `cargo fmt`, `cargo xtask test`, `cargo xtask lint`, and
 `cargo xtask dist` when exports or the build change.
