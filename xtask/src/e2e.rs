@@ -229,8 +229,10 @@ fn e2e_root(r: &Root, testenv: &Path, tsmod: &[PathBuf]) -> Result<Vec<String>, 
         fails.push(format!("{}: the backend wasn't activated within 90 s (plugin loaded? see {})", r.os, log.display()));
     }
     let plugins = rcon(testenv, r.port, "amxx plugins");
-    if !plugins.lines().any(|l| l.contains(PLUGIN_TITLE) && l.to_lowercase().contains("running")) {
-        fails.push(format!("{}: `amxx plugins` doesn't list {PLUGIN_TITLE} as running", r.os));
+    // Installed with plugins.ini's `debug` flag, which `amxx plugins` lists as "debug", not "running".
+    let running = |l: &str| l.split_whitespace().last().is_some_and(|s| s == "running" || s == "debug");
+    if !plugins.lines().any(|l| l.contains(PLUGIN_TITLE) && running(l)) {
+        fails.push(format!("{}: `amxx plugins` doesn't list {PLUGIN_TITLE} as running or debug", r.os));
     }
     for cmd in ["addbot", "addbot", "rcbot addbot", "rcbot addbot"] {
         rcon(testenv, r.port, cmd);
