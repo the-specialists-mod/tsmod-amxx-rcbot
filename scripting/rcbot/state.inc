@@ -544,7 +544,8 @@ enum Bw_I
 	BW_CLIP,
 	BW_RESERVE,
 	BW_MAX_CLIP,
-	BW_HAS_WEAPON			// m_bHasWeapon (registered: weapons.inc g_wp_*)
+	BW_HAS_WEAPON,			// m_bHasWeapon (registered: weapons.inc g_wp_*)
+	BW_INFO					// m_pWeaponInfo is Some: the registry had w at SetWeapon
 };
 new g_bw_weapon[RC_SLOTS][RC_MAX_WEAPONS][Bw_I];
 

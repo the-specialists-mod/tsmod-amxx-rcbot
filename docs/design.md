@@ -176,125 +176,155 @@ to the front drops the last task instead (the Rust queue is unbounded).
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
 | think.rs Bot::teleported, look's part | `look.inc` `look_teleported` | ported |
-| think.rs Bot::spawn_init, look's part. | `look.inc` `look_spawn_init` | ported |
-| look.rs Bot::work_view_angles (CBot::WorkViewAngles) | `look.inc` `look_work_view_angles` | stub |
-| look.rs Bot::set_view_angles (CBot::SetViewAngles) | `look.inc` `look_set_view_angles` | stub |
-| look.rs Bot::yaw_angle_to. | `look.inc` `look_yaw_angle_to` | stub |
-| look.rs Bot::dot_from_origin. | `look.inc` `look_dot_from_origin` | stub |
-| look.rs Bot::in_view_cone. | `look.inc` `look_in_view_cone` | stub |
-| look.rs Bot::aim_point (design §4 | `look.inc` `look_aim_point` | stub |
-| look.rs Bot::aim_vector (GetAimVector with the bot's aim error). | `look.inc` `look_aim_vector` | stub |
-| look.rs Bot::turn_to (the aimed turn | `look.inc` `look_turn_to` | stub |
+| think.rs Bot::spawn_init, look's part | `look.inc` `look_spawn_init` | ported |
+| look.rs Bot::work_view_angles (CBot::WorkViewAngles) | `look.inc` `look_work_view_angles` | ported |
+| look.rs Bot::set_view_angles (CBot::SetViewAngles) | `look.inc` `look_set_view_angles` | ported |
+| look.rs Bot::yaw_angle_to | `look.inc` `look_yaw_angle_to` | ported |
+| look.rs Bot::dot_from_origin | `look.inc` `look_dot_from_origin` | ported |
+| look.rs Bot::in_view_cone | `look.inc` `look_in_view_cone` | ported |
+| look.rs Bot::aim_point (design §4: chest, head for skilled bots with precise guns) | `look.inc` `look_aim_point` | ported |
+| look.rs Bot::aim_vector (GetAimVector rewritten: lead, angular error, settling) | `look.inc` `look_aim_vector` | ported |
+| look.rs Bot::turn_to (the aimed turn: time constant, feed-forward, max rate) | `look.inc` `look_turn_to` | ported |
+| math.rs Vector::normalize (zero becomes (0, 0, 1), unlike math.inc's vec_normalize) | `look.inc` `look_normalize` | ported |
 
 ### preaim.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| preaim.rs PreAim::default (a new bot). | `preaim.inc` `preaim_bot_init` | stub |
-| preaim.rs Bot::watch | `preaim.inc` `preaim_watch` | stub |
-| preaim.rs Bot::pre_aim_target. | `preaim.inc` `preaim_target` | stub |
-| preaim.rs Bot::update_pre_aim. | `preaim.inc` `preaim_update` | stub |
-| preaim.rs Bot::pre_aim_look. | `preaim.inc` `preaim_look` | stub |
+| preaim.rs PreAim::default (a new bot) | `preaim.inc` `preaim_bot_init` | ported |
+| preaim.rs Bot::watch | `preaim.inc` `preaim_watch` | ported |
+| preaim.rs Bot::pre_aim_target (nav_visible, nav_heatmap_danger) | `preaim.inc` `preaim_target` | ported |
+| preaim.rs Bot::update_pre_aim | `preaim.inc` `preaim_update` | ported |
+| preaim.rs Bot::pre_aim_look | `preaim.inc` `preaim_look` | ported |
 
 ### combat.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| think.rs Bot::spawn_init, combat's part. | `combat.inc` `combat_spawn_init` | ported |
-| combat.rs Bot::is_visible (IsInVisibleList). the Visibles bits (g_cb_vis_bits) once update_visibles is port... | `combat.inc` `combat_is_visible` | partial |
+| think.rs Bot::spawn_init, combat's part | `combat.inc` `combat_spawn_init` | ported |
+| mod.rs Bot::new's Visibles and range costs (a new bot) | `combat.inc` `combat_bot_init` | ported |
+| combat.rs Visibles::contains (IsInVisibleList) | `combat.inc` `combat_is_visible` | ported |
+| combat.rs Visibles::set (AddVisible / RemoveVisible; a full list drops the newest) | `combat.inc` `combat_set_visible` | ported |
+| combat.rs Bot::fvisible (FVisible: middle, then eyes; see body / head) | `combat.inc` `combat_fvisible` | ported |
 | combat.rs Bot::fvisible_point | `combat.inc` `combat_fvisible_point` | ported |
-| combat.rs Bot::is_enemy (players) | `combat.inc` `combat_is_enemy` | partial |
-| combat.rs / mod.rs Bot::new's Visibles and range costs (a new bot). | `combat.inc` `combat_bot_init` | stub |
-| mod.rs Bot::hurt_by (BotEvent HURT for a damage report) | `combat.inc` `combat_hurt_by` | stub |
-| mod.rs Bot::hurt (hurt_origin, fight.attacker, next_get_enemy_time, FaceHurtOrigin). | `combat.inc` `combat_hurt` | stub |
-| combat.rs Bot::fvisible (FVisible | `combat.inc` `combat_fvisible` | stub |
-| combat.rs Bot::update_visibles (the vision pass, vis_update_revs per call). | `combat.inc` `combat_update_visibles` | stub |
-| combat.rs Bot::work_enemy_costs. | `combat.inc` `combat_work_enemy_costs` | stub |
-| combat.rs Bot::find_enemy (FindEnemy) | `combat.inc` `combat_find_enemy` | stub |
-| combat.rs Bot::enemy_found. | `combat.inc` `combat_enemy_found` | stub |
-| combat.rs Bot::enemy_down. | `combat.inc` `combat_enemy_down` | stub |
-| combat.rs Bot::decide_jump_duck_strafe (the decision perceptrons, rl_bot_decide). | `combat.inc` `combat_decide_jump_duck_strafe` | stub |
-| combat.rs Bot::want_to_follow_enemy. | `combat.inc` `combat_want_to_follow_enemy` | stub |
-| combat.rs Bot::run_for_cover. | `combat.inc` `combat_run_for_cover` | stub |
-| combat.rs Bot::flee_grenades (design §4 | `combat.inc` `combat_flee_grenades` | stub |
-| combat.rs Bot::remember_lost_enemy. | `combat.inc` `combat_remember_lost_enemy` | stub |
-| combat.rs Bot::update_conditions. | `combat.inc` `combat_update_conditions` | stub |
-| combat.rs Bot::best_weapon | `combat.inc` `combat_best_weapon` | stub |
+| combat.rs box_in_sphere | `combat.inc` `combat_box_in_sphere` | ported |
+| combat.rs Bot::is_enemy (players, tm_ model teams by model index, breakables) | `combat.inc` `combat_is_enemy` | ported |
+| combat.rs Bot::breakable_is_enemy (BotFunc_BreakableIsEnemy) | `combat.inc` `combat_breakable_is_enemy` | ported |
+| combat.rs Bot::can_avoid (CanAvoid, TS) | `combat.inc` `combat_can_avoid` | ported |
+| combat.rs Bot::update_visibles (the vision pass, vision revs per call) | `combat.inc` `combat_update_visibles` | partial: no PVS pre-test until world.inc's world_in_pvs compiles (the clear line decides alone) |
+| combat.rs Bot::is_inanimate | `combat.inc` `combat_is_inanimate` | ported |
+| combat.rs Bot::work_enemy_costs (survival gene via rl_bot_gene) | `combat.inc` `combat_work_enemy_costs` | ported |
+| combat.rs Bot::clear_enemy_costs | `combat.inc` `combat_clear_enemy_costs` | ported |
+| events.rs Bot::rep_of (Option: client.inc's rep id, the profile's reps) | `combat.inc` `combat_rep_of` | ported |
+| combat.rs Bot::find_enemy (FindEnemy rewritten: threat scores, 25% to switch) | `combat.inc` `combat_find_enemy` | ported |
+| combat.rs Bot::enemy_found | `combat.inc` `combat_enemy_found` | partial: the bot camera hand-off (BotCam::set_current_bot) waits for a botcam.inc stock |
+| combat.rs Bot::enemy_down | `combat.inc` `combat_enemy_down` | ported |
+| combat.rs Bot::decide_jump_duck_strafe (rl_bot_decide) | `combat.inc` `combat_decide_jump_duck_strafe` | ported |
+| combat.rs Bot::want_to_follow_enemy | `combat.inc` `combat_want_to_follow_enemy` | ported |
+| combat.rs Bot::run_for_cover (nav_cover with the heatmap, nav_nearest) | `combat.inc` `combat_run_for_cover` | ported |
+| think.rs trace_toss | `combat.inc` `combat_trace_toss` | ported (local copy until think.inc exposes one) |
+| combat.rs Bot::flee_grenades (design §4: any within 400 units) | `combat.inc` `combat_flee_grenades` | ported |
+| combat.rs Bot::remember_lost_enemy | `combat.inc` `combat_remember_lost_enemy` | ported |
+| combat.rs Bot::update_conditions | `combat.inc` `combat_update_conditions` | ported |
+| combat.rs Bot::best_weapon (GetBestWeaponId; need_weapons) | `combat.inc` `combat_best_weapon` | ported |
+| mod.rs Bot::hurt_by (BotEvent HURT for a damage report) | `combat.inc` `combat_hurt_by` | ported |
+| mod.rs Bot::hurt | `combat.inc` `combat_hurt` | ported |
+| Entity fields (exists, serial, is_client, is_alive, origin, view_ofs, velocity, v_angle, boxes, size, health, effects) | `combat.inc` `combat_ent_*` | ported |
 
 ### fire.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| think.rs Bot::spawn_init | `fire.inc` `fire_spawn_init` | ported |
-| fire.rs Bot::fire_buttons | `fire.inc` `fire_buttons` | partial |
-| fire.rs Bot::capped_speeds | `fire.inc` `fire_capped_speeds` | partial |
-| fire.rs Bot::track_shots (count shots by clip for the recoil penalty). | `fire.inc` `fire_track_shots` | stub |
-| fire.rs Bot::safe_to_reload. | `fire.inc` `fire_safe_to_reload` | stub |
-| fire.rs Bot::in_aim. | `fire.inc` `fire_in_aim` | stub |
-| fire.rs Bot::spread_limit. | `fire.inc` `fire_spread_limit` | stub |
-| fire.rs Bot::ready_to_fire. | `fire.inc` `fire_ready_to_fire` | stub |
-| fire.rs Bot::combat_move. | `fire.inc` `fire_combat_move` | stub |
-| fire.rs Bot::dodge. | `fire.inc` `fire_dodge` | stub |
-| fire.rs Bot::saw_enemy. | `fire.inc` `fire_saw_enemy` | stub |
-| fire.rs Bot::enemy_out_of_sight. | `fire.inc` `fire_enemy_out_of_sight` | stub |
-| fire.rs Bot::lost_aim_point. | `fire.inc` `fire_lost_aim_point` | stub |
-| fire.rs Bot::hold_angle. | `fire.inc` `fire_hold_angle` | stub |
-| fire.rs Bot::threat (who to fight first). | `fire.inc` `fire_threat` | stub |
-| fire.rs Bot::weapon_score. | `fire.inc` `fire_weapon_score` | stub |
-| fire.rs Bot::learned_score (rl_ws_score). | `fire.inc` `fire_learned_score` | stub |
-| fire.rs Bot::best_scored_weapon | `fire.inc` `fire_best_scored_weapon` | stub |
-| fire.rs Bot::choose_weapon. | `fire.inc` `fire_choose_weapon` | stub |
-| fire.rs Bot::use_powerup. | `fire.inc` `fire_use_powerup` | stub |
-| fire.rs Bot::grenade_behind_cover. | `fire.inc` `fire_grenade_behind_cover` | stub |
-| fire.rs throw_pitch | `fire.inc` `fire_throw_pitch` | stub |
+| think.rs Bot::spawn_init (fight = Fight::default()) | `fire.inc` `fire_spawn_init` | ported |
+| fire.rs Bot::gun_in_hand | `fire.inc` `fire_gun_in_hand` | ported |
+| fire.rs Bot::double_fire_rate | `fire.inc` `fire_double_fire_rate` | ported |
+| fire.rs Bot::skill_share | `fire.inc` `fire_skill_share` | ported |
+| fire.rs Bot::track_shots | `fire.inc` `fire_track_shots` | ported |
+| fire.rs Bot::fire_buttons (fresh presses, akimbo, spread limit, dive and roll) | `fire.inc` `fire_buttons` | ported |
+| fire.rs Bot::safe_to_reload | `fire.inc` `fire_safe_to_reload` | ported |
+| fire.rs Bot::in_aim | `fire.inc` `fire_in_aim` | ported |
+| fire.rs Bot::capped_speeds | `fire.inc` `fire_capped_speeds` | ported |
+| fire.rs Bot::spread_limit | `fire.inc` `fire_spread_limit` | ported |
+| fire.rs Bot::spread_ok | `fire.inc` `fire_spread_ok` | ported |
+| fire.rs Bot::ready_to_fire | `fire.inc` `fire_ready_to_fire` | ported |
+| fire.rs Bot::combat_move | `fire.inc` `fire_combat_move` | ported |
+| fire.rs Bot::dodge | `fire.inc` `fire_dodge` | ported |
+| fire.rs Bot::saw_enemy | `fire.inc` `fire_saw_enemy` | ported |
+| fire.rs Bot::enemy_out_of_sight | `fire.inc` `fire_enemy_out_of_sight` | ported |
+| fire.rs Bot::lost_aim_point | `fire.inc` `fire_lost_aim_point` | ported |
+| fire.rs Bot::hold_angle | `fire.inc` `fire_hold_angle` | ported |
+| fire.rs Bot::threat (with a known rep) | `fire.inc` `fire_threat_rep` | ported |
+| fire.rs Bot::threat | `fire.inc` `fire_threat` | ported |
+| fire.rs Bot::weapon_score | `fire.inc` `fire_weapon_score` | ported |
+| fire.rs Bot::learned_score (learning_weapon_score) | `fire.inc` `fire_learned_score` | ported |
+| fire.rs Bot::best_scored_weapon | `fire.inc` `fire_best_scored_weapon` | ported |
+| fire.rs Bot::choose_weapon | `fire.inc` `fire_choose_weapon` | ported |
+| fire.rs Bot::use_powerup | `fire.inc` `fire_use_powerup` | ported |
+| fire.rs Bot::grenade_behind_cover | `fire.inc` `fire_grenade_behind_cover` | ported |
+| fire.rs throw_pitch: (pitch, miss) | `fire.inc` `fire_throw_pitch` | ported |
 
 ### botweapons.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
 | mod.rs Bot::weapon_select_failed | `botweapons.inc` `botweapons_select_failed` | ported |
-| think.rs Bot::frame | `botweapons.inc` `botweapons_ensure_kungfu` | ported |
+| think.rs Bot::frame: TS bots always have kung fu | `botweapons.inc` `botweapons_ensure_kungfu` | ported |
 | think.rs Bot::spawn_init's weapon part | `botweapons.inc` `botweapons_spawn_init` | ported |
-| BotWeapons::add (SetWeapon) | `botweapons.inc` `botweapons_add` | partial |
-| BotWeapons::remove. | `botweapons.inc` `botweapons_remove` | ported |
-| BotWeapons::has. | `botweapons.inc` `botweapons_has` | ported |
-| mod.rs Bot::new's BotWeapons::default (a new bot). | `botweapons.inc` `botweapons_bot_init` | partial |
-| think.rs Bot::frame's weapon block | `botweapons.inc` `botweapons_frame_sync` | stub |
-| bot/weapons.rs BotWeapons::best_loaded_gun | `botweapons.inc` `botweapons_best_loaded_gun` | stub |
-| bot/weapons.rs BotWeapons::weapon_info (+ record) | `botweapons.inc` `botweapons_weapon_info` | stub |
-| bot/weapons.rs BotWeapons::sync_inventory (from world_inventory). | `botweapons.inc` `botweapons_sync_inventory` | stub |
-| bot/weapons.rs BotWeapons::best_weapon_id | `botweapons.inc` `botweapons_best_weapon_id` | stub |
-| bot/weapons.rs BotWeapon::is_melee (no info counts as melee). | `botweapons.inc` `botweapons_is_melee` | stub |
-| bot/weapons.rs BotWeapon::clip_is_empty. | `botweapons.inc` `botweapons_clip_is_empty` | stub |
-| bot/weapons.rs BotWeapon::out_of_ammo. | `botweapons.inc` `botweapons_out_of_ammo` | stub |
-| bot/weapons.rs BotWeapon::low_on_ammo (TS | `botweapons.inc` `botweapons_low_on_ammo` | stub |
-| bot/weapons.rs BotWeapon::can_reload. | `botweapons.inc` `botweapons_can_reload` | stub |
-| bot/weapons.rs BotWeapon::need_to_reload. | `botweapons.inc` `botweapons_need_to_reload` | stub |
-| bot/weapons.rs BotWeapon::can_shoot_primary. | `botweapons.inc` `botweapons_can_shoot_primary` | stub |
-| mod.rs Bot::reload | `botweapons.inc` `botweapons_reload` | stub |
+| bot/weapons.rs BotWeapon::set_weapon (SetWeapon) | `botweapons.inc` `botweapons_set_weapon` | ported |
+| BotWeapons::add (AddWeapon) | `botweapons.inc` `botweapons_add` | ported |
+| BotWeapons::remove | `botweapons.inc` `botweapons_remove` | ported |
+| BotWeapons::has | `botweapons.inc` `botweapons_has` | ported |
+| mod.rs Bot::new's BotWeapons::default (a new bot) | `botweapons.inc` `botweapons_bot_init` | ported |
+| think.rs Bot::frame's weapon block (BotClient_TS_WeaponInfo, inventory sync, drop on empty) | `botweapons.inc` `botweapons_frame_sync` | ported |
+| bot/weapons.rs BotWeapons::best_loaded_gun | `botweapons.inc` `botweapons_best_loaded_gun` | ported |
+| bot/weapons.rs BotWeapons::record | `botweapons.inc` `botweapons_record` | ported |
+| bot/weapons.rs BotWeapons::weapon_info | `botweapons.inc` `botweapons_weapon_info` | ported |
+| bot/weapons.rs BotWeapons::sync_inventory (world_inventory) | `botweapons.inc` `botweapons_sync_inventory` | ported |
+| bot/weapons.rs BotWeapons::best_weapon_id (enemy_dist < 0: none; need_weapons) | `botweapons.inc` `botweapons_best_weapon_id` | ported |
+| bot/weapons.rs BotWeapon::is_melee | `botweapons.inc` `botweapons_is_melee` | ported |
+| bot/weapons.rs BotWeapon::clip_is_empty | `botweapons.inc` `botweapons_clip_is_empty` | ported |
+| bot/weapons.rs BotWeapon::out_of_ammo | `botweapons.inc` `botweapons_out_of_ammo` | ported |
+| bot/weapons.rs BotWeapon::low_on_ammo | `botweapons.inc` `botweapons_low_on_ammo` | ported |
+| bot/weapons.rs BotWeapon::can_reload | `botweapons.inc` `botweapons_can_reload` | ported |
+| bot/weapons.rs BotWeapon::need_to_reload | `botweapons.inc` `botweapons_need_to_reload` | ported |
+| bot/weapons.rs BotWeapon::can_be_used_underwater | `botweapons.inc` `botweapons_can_be_used_underwater` | ported |
+| bot/weapons.rs BotWeapon::priority | `botweapons.inc` `botweapons_priority` | ported |
+| bot/weapons.rs BotWeapon::can_shoot_primary | `botweapons.inc` `botweapons_can_shoot_primary` | ported |
+| mod.rs Bot::reload (design §4: once per RELOAD_RETRY, never spammed) | `botweapons.inc` `botweapons_reload` | ported |
 
 ### weapons.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| host lib.rs game_init | `weapons.inc` `weapons_read_presets` | stub |
-| weapons/mod.rs Weapons::clear (ServerActivate). | `weapons.inc` `weapons_clear` | stub |
-| weapons/mod.rs Weapons::add (from the preset). | `weapons.inc` `weapons_add` | stub |
-| weapons/mod.rs WeaponInfo::primary_in_range. | `weapons.inc` `weapons_primary_in_range` | stub |
-| weapons/mod.rs WeaponInfo::secondary_in_range. | `weapons.inc` `weapons_secondary_in_range` | stub |
+| host lib.rs game_init: WeaponPresets::parse(bot_weapons.ini, MOD_TS) and its warnings | `weapons.inc` `weapons_read_presets` | ported |
+| stoi.rs stoi (std::stoi) | `weapons.inc` `weapons_stoi` | ported |
+| weapons/mod.rs Weapons::clear | `weapons.inc` `weapons_clear` | ported |
+| weapons/mod.rs Weapons::add (record's registration, with MOD_TS's preset) | `weapons.inc` `weapons_add` | ported |
+| weapons/mod.rs Weapons::get(w).is_some() | `weapons.inc` `weapons_registered` | ported |
+| weapons/mod.rs WeaponInfo::can_be_used_underwater / can_use_primary / can_use_secondary / priority / is_melee | `weapons.inc` `weapons_can_be_used_underwater` | ported |
+|  | `weapons.inc` `weapons_can_use_primary` | ported |
+|  | `weapons.inc` `weapons_can_use_secondary` | ported |
+|  | `weapons.inc` `weapons_priority` | ported |
+|  | `weapons.inc` `weapons_is_melee` | ported |
+| weapons/mod.rs WeaponInfo::primary_in_range | `weapons.inc` `weapons_primary_in_range` | ported |
+| weapons/mod.rs WeaponInfo::secondary_in_range | `weapons.inc` `weapons_secondary_in_range` | ported |
+| weapons/mod.rs WeaponInfo::prim_max_range / prim_min_range | `weapons.inc` `weapons_prim_max_range` | ported |
+|  | `weapons.inc` `weapons_prim_min_range` | ported |
 
 ### tsweapons.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
 | TsWeapon::from_game_id | `tsweapons.inc` `ts_weapon_from_game_id` | ported |
-| The game's id of an RCBot id (ts_bot_select_weapon, ts_bot_buy). | `tsweapons.inc` `ts_weapon_to_game_id` | ported |
-| ts_data.rs gun_data | `tsweapons.inc` `tsweapons_init` | stub |
-| ts_data.rs GunData::needs_fresh_press. | `tsweapons.inc` `tsweapons_needs_fresh_press` | stub |
-| ts_data.rs GunData::press_interval. | `tsweapons.inc` `tsweapons_press_interval` | stub |
-| ts_data.rs GunData::range_multiplier. | `tsweapons.inc` `tsweapons_range_multiplier` | stub |
-| ts_data.rs GunData::grow_penalty | `tsweapons.inc` `tsweapons_grow_penalty` | stub |
-| ts_data.rs decay_penalty. | `tsweapons.inc` `tsweapons_decay_penalty` | stub |
+| The game's id of an RCBot id (ts_bot_select_weapon, ts_bot_buy) | `tsweapons.inc` `ts_weapon_to_game_id` | ported |
+| ts_data.rs ROWS / AMMO / gun_data (once at plugin_init) | `tsweapons.inc` `tsweapons_init` | ported |
+| ts_data.rs gun_data(id).is_some() | `tsweapons.inc` `tsweapons_known` | ported |
+| ts_data.rs GunData::is_melee_or_thrown | `tsweapons.inc` `tsweapons_is_melee_or_thrown` | ported |
+| ts_data.rs GunData::needs_fresh_press | `tsweapons.inc` `tsweapons_needs_fresh_press` | ported |
+| ts_data.rs GunData::press_interval | `tsweapons.inc` `tsweapons_press_interval` | ported |
+| ts_data.rs GunData::range_multiplier | `tsweapons.inc` `tsweapons_range_multiplier` | ported |
+| ts_data.rs GunData::grow_penalty | `tsweapons.inc` `tsweapons_grow_penalty` | ported |
+| ts_data.rs decay_penalty | `tsweapons.inc` `tsweapons_decay_penalty` | ported |
 
 ### movement.inc
 

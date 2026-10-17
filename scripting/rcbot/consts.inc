@@ -252,3 +252,8 @@ enum
 // nav/mod.rs MAX_JUMP_HEIGHT, CONTENTS_WATER.
 #define RC_MAX_JUMP_HEIGHT			45.0
 #define RC_CONTENTS_WATER			-3
+
+// ---- combat (owner: combat; look.inc, combat.inc, fire.inc read these) ----------------------
+
+// fire.rs AIM_RADIUS: the radius the bot treats a player as for "on target" and spread.
+#define AIM_RADIUS					14.0
