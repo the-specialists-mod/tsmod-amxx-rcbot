@@ -619,7 +619,9 @@ enum Kf_I
 	KF_REACTING,			// Answering::answer, -1 none
 	KF_REACT_SEEN,
 	KF_REACT_KIND,
-	KF_OPP_BLOCKS
+	KF_OPP_BLOCKS,
+	KF_OPP_KEY_KIND,		// Fight::opp_key: RlKeyKind (0 none) and id
+	KF_OPP_KEY_ID
 };
 stock g_kf_i[RC_SLOTS][Kf_I];
 
@@ -655,6 +657,11 @@ enum Kf_V
 };
 stock Float:g_kf_v[RC_SLOTS][Kf_V][3];
 stock g_kf_opp_attacks[RC_SLOTS][KF_ATTACK_KINDS];
+// KungFu::opponents is a map by OpponentKey: g_kf_opp_stances / g_kf_opp_reactions' second index
+// is a row, rows 0 .. g_kf_opp_rows - 1 holding the keys below (not player indexes).
+stock g_kf_opp_key_kind[RC_SLOTS][RC_SLOTS];
+stock g_kf_opp_key_id[RC_SLOTS][RC_SLOTS];
+stock g_kf_opp_rows[RC_SLOTS];
 
 // ============================================================================================
 // learning (owner: kungfu; learning.inc). learning.rs BotLearning; the rcbot_learn
