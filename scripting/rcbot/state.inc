@@ -751,12 +751,10 @@ enum Cl_I
 	CL_DEBUG_AUTO_WPT,		// m_bDebugAutoWaypoint
 	CL_SET_UP_AUTO_WPT,		// m_bSetUpAutoWaypoint
 	CL_TOOLTIPS_SENT,		// m_iToolTipsSent: a bit per TOOLTIP_*
-	CL_GRIP,				// force_grips: the entity +rcbot_force_grip holds, 0 none
-	CL_AUTO_RUNNING			// host editor.rs Editor::auto has an entry (nav_auto_reset when it goes)
+	CL_GRIP					// force_grips: the entity +rcbot_force_grip holds, 0 none
 };
 new g_cl_i[RC_SLOTS][Cl_I];
 new Float:g_cl_teleport[RC_SLOTS][3];		// m_vTeleportVector
-new Float:g_cl_display_time[RC_SLOTS];		// editor.rs display_time (m_fWaypointDisplayTime)
 new g_cl_pass[RC_SLOTS][16];				// m_szPass (BOT_MAX_PASSWORD_LEN - 1 bytes)
 new g_cl_steam[RC_SLOTS][32];				// m_szSteamId (STEAM_ID_LEN - 1 bytes)
 new g_cl_listen_server;						// m_pListenServerEdict: player index, 0 none

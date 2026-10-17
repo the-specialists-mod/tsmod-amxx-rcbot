@@ -790,6 +790,20 @@ stock squad_modes(id)
 	}
 }
 
+// Squad::is_stealth (IsStealthMode) of the bot's squad (movement.rs reads it): false without one.
+stock bool:squad_is_stealth(id)
+{
+	new s = squad_get(g_sq_i[id][SQ_SQUAD]);
+	return s != -1 && g_squad_combat_type[s] == COMBAT_STEALTH;
+}
+
+// Squad::can_shoot (SquadCanShoot) of the bot's squad: true without one.
+stock bool:squad_can_shoot(id)
+{
+	new s = squad_get(g_sq_i[id][SQ_SQUAD]);
+	return s == -1 || g_squad_can_fire[s];
+}
+
 // Bot::squad_enemy_found (EnemyFound's squad part): a leader's squad goes back to a normal wedge.
 stock squad_enemy_found(id)
 {

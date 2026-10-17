@@ -776,7 +776,7 @@ static commands_menu_select(me)
 // (nothing at -1), the shared ones switch on the key pressed.
 stock commands_menu_action(player, action, bits)
 {
-	new wpt = g_cl_i[player][CL_CURRENT_WPT], key = g_cl_i[player][CL_LAST_KEY];
+	new wpt = clients_current_waypoint(player), key = g_cl_i[player][CL_LAST_KEY];
 	switch (action)
 	{
 		case MA_TOGGLE_FLAG:
@@ -2005,16 +2005,19 @@ static commands_path_waypoint(client, me)
 	if (equal(g_ca[0], "on"))
 	{
 		g_cl_i[client][CL_PATHS_ON] = 1;
+		clients_editor_sync(client);
 		commands_print(me, "Waypoint paths are now being shown");
 	}
 	else if (equal(g_ca[0], "off"))
 	{
 		g_cl_i[client][CL_PATHS_ON] = 0;
+		clients_editor_sync(client);
 		commands_print(me, "Waypoints paths are not being shown");
 	}
 	else if (equal(g_ca[0], "create", 6) || equal(g_ca[0], "remove", 6))
 	{
 		g_cl_i[client][CL_PATHS_ON] = 1;
+		clients_editor_sync(client);
 		new n = g_ca[0][6] == '1' ? 1 : (g_ca[0][6] == '2' ? 2 : 0);
 		if (n != 0 && me)
 		{
@@ -2028,7 +2031,7 @@ static commands_path_waypoint(client, me)
 			{
 				nav_edit_remove_path(me, origin, n);
 			}
-			clients_send_nav_events(me);
+			navigate_send_events(me);
 		}
 	}
 	else if (equal(g_ca[0], "enable"))
@@ -2164,6 +2167,7 @@ static commands_waypoint(client, me)
 	{
 		new bool:on = equal(g_ca[0], "on");
 		g_cl_i[client][CL_WAYPOINT_ON] = on;
+		clients_editor_sync(client);
 		commands_print(me, on ? "Waypoints are now being shown" : "Waypoints are not being shown");
 	}
 	else if (equal(g_ca[0], "load"))
@@ -2185,19 +2189,21 @@ static commands_waypoint(client, me)
 	else if (equal(g_ca[0], "add"))
 	{
 		g_cl_i[client][CL_WAYPOINT_ON] = 1;
+		clients_editor_sync(client);
 		if (me)
 		{
 			nav_add(origin, 0, me, true, g_cfg_i[CFG_AUTO_PATH_WAYPOINT] != 0, true);
-			clients_send_nav_events(me);
+			navigate_send_events(me);
 		}
 	}
 	else if (equal(g_ca[0], "delete"))
 	{
 		g_cl_i[client][CL_WAYPOINT_ON] = 1;
+		clients_editor_sync(client);
 		if (me)
 		{
 			nav_delete_near(origin);
-			clients_send_nav_events(me);
+			navigate_send_events(me);
 		}
 	}
 	else if (equal(g_ca[0], "info"))
