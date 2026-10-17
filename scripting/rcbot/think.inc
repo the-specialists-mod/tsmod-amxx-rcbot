@@ -10,8 +10,7 @@
 // RCBot by Paul "Cheeseh" Murphy; tsmod-amxx-rcbot, GPL-3.0-or-later with the AMX Mod X and RCBot
 // linking exceptions.
 //
-// Status: ported (docs/design.md §3 think.inc). learn_items doesn't learn the items in sight
-// that the map's list lacks (items.inc has no ItemMemory::learn yet).
+// Status: ported (docs/design.md §3 think.inc).
 
 #if defined _rcbot_think_included
 	#endinput
@@ -545,13 +544,17 @@ stock think_select_loadout(id)
 	g_th_i[id][TH_CONDITIONS] |= COND_SELECTED_GUN;
 }
 
-// think.rs Bot::learn_items: the map's items (the list now and then) and whether the ones in view
-// are there.
-// TODO(items): the items in sight the map's list doesn't name (a weapon a player dropped) are
-// learned from the visibles in the Rust bot (ItemMemory::learn); items.inc has no such stock yet.
+// think.rs Bot::learn_items: the map's items (the list now and then), the items in sight the list
+// doesn't name yet (a weapon a player dropped: combat's visibles), and whether the ones in view are
+// there.
 stock think_learn_items(id)
 {
 	items_scan(id);
+	new n = min(g_cb_i[id][CB_VIS_COUNT], RC_MAX_VISIBLES);
+	for (new k = 0; k < n; k++)
+	{
+		items_learn(id, g_cb_vis_order[id][k]);
+	}
 	items_look(id);
 }
 

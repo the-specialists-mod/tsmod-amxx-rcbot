@@ -80,82 +80,96 @@ Generated from the stubs' comments when the skeleton was made; owners keep their
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| think.rs Bot::think (CBot::Think). | `think.inc` `think_bot` | partial: the living branch is minimal.inc |
+| think.rs Bot::think (CBot::Think): the living branch calls the subsystems in think.rs's order; `combat_find_enemy`'s index gets its serial here | `think.inc` `think_bot` | ported |
+| think.rs Bot::think's weapon upkeep (drop an empty gun, switch or reload an empty clip, reload when low) | `think.inc` `think_weapon_upkeep` | ported |
+| think.rs Bot::think's can-see-the-next-waypoint check | `think.inc` `think_see_waypoint` | ported |
 | think.rs Bot::think's dead branch | `think.inc` `think_dead` | ported |
 | think.rs Bot::spawn_init (CBot::SpawnInit(false)) | `think.inc` `think_spawn_init` | ported |
-| think.rs Bot::select_loadout | `think.inc` `think_select_loadout` | partial: minimal_loadout until the GA / bandit |
-| think.rs Bot::look_for_new_tasks. | `think.inc` `think_look_for_new_tasks` | stub |
-| think.rs Bot::do_tasks (the task runner; task_* functions). | `think.inc` `think_do_tasks` | stub |
-| think.rs Bot::learn_items. | `think.inc` `think_learn_items` | stub |
-| think.rs Bot::switch_weapon | `think.inc` `think_switch_weapon` | stub |
-| think.rs Bot::objective_tasks / objective_role / defend_spot / ctb_tasks. | `think.inc` `think_objective_tasks` | stub |
-| think.rs Bot::can_pickup. | `think.inc` `think_can_pickup` | stub |
-| think.rs Bot::facing. | `think.inc` `think_facing` | stub |
-| think.rs is_grenade_rocket / trace_toss. | `think.inc` `think_is_grenade_rocket` | stub |
+| think.rs Bot::select_loadout (rl_bot_select_ts_weapons, then learning's bandit loadout) | `think.inc` `think_select_loadout` | ported |
+| think.rs Bot::look_for_new_tasks | `think.inc` `think_look_for_new_tasks` | ported |
+| think.rs Bot::do_tasks (the task runner) | `think.inc` `think_do_tasks` | ported |
+| think.rs task_find_path / path_deadline / push_current_on_path / nearest_to_origin | `think.inc` `think_task_find_path` (static) | ported |
+| think.rs task_normal_attack (the stunt perceptron is rl_bot_decide RlDecide_Stunt) | `think.inc` `think_task_normal_attack` (static) | ported |
+| think.rs task_use / task_listen; do_tasks' MOVE_TO_VECTOR | `think.inc` `think_task_use`, `think_task_listen`, `think_task_move_to_vector` (static) | ported |
+| think.rs Bot::learn_items (items_scan, items_learn for combat's visibles, items_look) | `think.inc` `think_learn_items` | ported |
+| think.rs Bot::switch_weapon | `think.inc` `think_switch_weapon` | ported |
+| think.rs Bot::drop_roaming_for_sound | `think.inc` `think_drop_roaming_for_sound` (static) | ported |
+| think.rs Bot::objective_tasks / objective_role / defend_spot / ctb_tasks (second argument: the schedule id) | `think.inc` `think_objective_tasks` | ported |
+| think.rs Bot::can_pickup (the classname test is tsx's entity kind, TSENT_POWERUP / TSENT_GROUND_WEAPON) | `think.inc` `think_can_pickup` | ported |
+| think.rs Bot::facing | `think.inc` `think_facing` | ported |
+| think.rs is_grenade_rocket | `think.inc` `think_is_grenade_rocket` | ported |
+| think.rs trace_toss | `think.inc` `think_trace_toss` | ported |
+| mod.rs Entity::handle's serial (players' user ids, items' TSITM_SERIAL), EntRef equality, Bot::resolve, Entity::is_alive / is_moving, Bot::distance_from, nearest_waypoint, failed goals, flags::team_allows, add_task with a timeout | `think.inc` `think_handle_serial`, `think_same_handle`, `think_resolve`, `think_entity_alive`, `think_entity_moving`, `think_distance_from`, `think_nearest_waypoint`, `think_failed_goals`, `think_team_allows`, `think_add_timed` | ported |
 
 ### tasks.inc
+
+The queue holds `RC_MAX_TASKS` (16): a task added to the end of a full queue is dropped, one added
+to the front drops the last task instead (the Rust queue is unbounded).
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
 | Tasks::flush. | `tasks.inc` `tasks_flush` | ported |
 | Tasks::is_empty / len. | `tasks.inc` `tasks_count` | ported |
 | Tasks::current's kind, TASK_NONE for none. | `tasks.inc` `tasks_current_kind` | ported |
-| Task::new + Tasks::add_to_end (AddTask) | `tasks.inc` `tasks_add` | stub |
-| Tasks::add_priority (AddPriorityTask). | `tasks.inc` `tasks_add_priority` | stub |
-| Tasks::add_to_front. | `tasks.inc` `tasks_add_to_front` | stub |
-| Tasks::has_task. | `tasks.inc` `tasks_has` | stub |
-| Tasks::get_task | `tasks.inc` `tasks_find` | stub |
-| Tasks::has_schedule. | `tasks.inc` `tasks_has_schedule` | stub |
-| Tasks::new_schedule_id. | `tasks.inc` `tasks_new_schedule_id` | stub |
-| Tasks::finish_schedule. | `tasks.inc` `tasks_finish_schedule` | stub |
-| Tasks::finish_schedule_desc. | `tasks.inc` `tasks_finish_schedule_desc` | stub |
-| Tasks::give_schedule_description. | `tasks.inc` `tasks_give_schedule_description` | stub |
-| Tasks::set_time_to_complete_schedule. | `tasks.inc` `tasks_set_time_to_complete_schedule` | stub |
-| Tasks::remove_timed_out_schedules. | `tasks.inc` `tasks_remove_timed_out_schedules` | stub |
-| Tasks::remove_similar_task. | `tasks.inc` `tasks_remove_similar` | stub |
-| Tasks::remove_paths. | `tasks.inc` `tasks_remove_paths` | stub |
-| Tasks::finished_current (done or failed; find-path hands its path on). | `tasks.inc` `tasks_finished_current` | stub |
-| Tasks::forget_edict. | `tasks.inc` `tasks_forget_edict` | stub |
-| Task::timed_out. | `tasks.inc` `tasks_timed_out` | stub |
-| TaskKind::description (CBotTask::_getTaskDescription) into out. | `tasks.inc` `tasks_description` | stub |
+| Task::new + Tasks::add_to_end (AddTask) | `tasks.inc` `tasks_add` | ported |
+| Tasks::add_priority (AddPriorityTask). | `tasks.inc` `tasks_add_priority` | ported |
+| Tasks::add_to_front (with remove_same_task, Task::same). | `tasks.inc` `tasks_add_to_front` | ported |
+| Tasks::has_task. | `tasks.inc` `tasks_has` | ported |
+| Tasks::get_task | `tasks.inc` `tasks_find` | ported |
+| Tasks::has_schedule. | `tasks.inc` `tasks_has_schedule` | ported |
+| Tasks::new_schedule_id. | `tasks.inc` `tasks_new_schedule_id` | ported |
+| Tasks::finish_schedule. | `tasks.inc` `tasks_finish_schedule` | ported |
+| Tasks::finish_schedule_desc. | `tasks.inc` `tasks_finish_schedule_desc` | ported |
+| Tasks::give_schedule_description. | `tasks.inc` `tasks_give_schedule_description` | ported |
+| Tasks::set_time_to_complete_schedule (secs from now). | `tasks.inc` `tasks_set_time_to_complete_schedule` | ported |
+| Tasks::remove_timed_out_schedules. | `tasks.inc` `tasks_remove_timed_out_schedules` | ported |
+| Tasks::remove_similar_task. | `tasks.inc` `tasks_remove_similar` | ported |
+| Tasks::remove_paths. | `tasks.inc` `tasks_remove_paths` | ported |
+| Tasks::finished_current (done or failed; find-path hands its path on). | `tasks.inc` `tasks_finished_current` | ported |
+| Tasks::forget_edict. | `tasks.inc` `tasks_forget_edict` | ported |
+| Task::timed_out. | `tasks.inc` `tasks_timed_out` | ported |
+| Task::set_time_to_complete / with_timeout (a slot, -1 ignored). | `tasks.inc` `tasks_set_time_to_complete` | ported |
+| TaskKind::description (CBotTask::_getTaskDescription) into out. | `tasks.inc` `tasks_description` | ported |
 
 ### goals.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| goals.rs score | `goals.inc` `goals_score` | stub |
-| goals.rs Bot::weapon_value. | `goals.inc` `goals_weapon_value` | stub |
-| goals.rs Bot::powerup_value. | `goals.inc` `goals_powerup_value` | stub |
-| goals.rs Bot::item_value (a KnownItem, items.inc slot). | `goals.inc` `goals_item_value` | stub |
-| goals.rs Bot::danger_near. | `goals.inc` `goals_danger_near` | stub |
-| goals.rs Bot::choose_goal | `goals.inc` `goals_choose` | stub |
-| goals.rs Bot::hold_spot | `goals.inc` `goals_hold_spot` | stub |
-| goals.rs Bot::fight_readiness. | `goals.inc` `goals_fight_readiness` | stub |
-| goals.rs Bot::predict_enemy. | `goals.inc` `goals_predict_enemy` | stub |
-| goals.rs Bot::claim_item_factor. | `goals.inc` `goals_claim_item_factor` | stub |
-| goals.rs Bot::regroup_point. | `goals.inc` `goals_regroup_point` | stub |
+| goals.rs score | `goals.inc` `goals_score` | ported |
+| goals.rs Bot::weapon_value (priorities: weapons.inc's WP_PRIORITY) | `goals.inc` `goals_weapon_value` | ported |
+| goals.rs Bot::powerup_value. | `goals.inc` `goals_powerup_value` | ported |
+| goals.rs Bot::item_value (a KnownItem, items.inc slot). | `goals.inc` `goals_item_value` | ported |
+| goals.rs Bot::danger_near (nav_heatmap_danger). | `goals.inc` `goals_danger_near` | ported |
+| goals.rs Bot::choose_goal: GOAL_*, arg, vec, score, and a hunt's sighting time (`when`) | `goals.inc` `goals_choose` | ported |
+| goals.rs Bot::hold_spot: the waypoint (-1 none) and its value | `goals.inc` `goals_hold_spot` | ported |
+| goals.rs Bot::claim_near. | `goals.inc` `goals_claim_near` (static) | ported |
+| goals.rs Bot::fight_readiness. | `goals.inc` `goals_fight_readiness` | ported |
+| goals.rs Bot::predict_enemy(origin, secs): the waypoint, -1 none | `goals.inc` `goals_predict_enemy` | ported |
+| goals.rs Bot::claim_item_factor (board_item_claimed). | `goals.inc` `goals_claim_item_factor` | ported |
+| goals.rs Bot::regroup_point (board_sighting, board_mates). | `goals.inc` `goals_regroup_point` | ported |
 
 ### special.inc
 
 | Rust (tsmod-rcbot-rs) | Pawn | Status |
 |---|---|---|
-| special.rs Bot::touch (DispatchTouch for a living bot) | `special.inc` `special_touch` | stub |
-| special.rs Bot::player_standing_on_me | `special.inc` `special_player_standing_on_me` | stub |
-| special.rs Bot::standing_on_player | `special.inc` `special_standing_on_player` | stub |
-| special.rs Bot::check_lift. | `special.inc` `special_check_lift` | stub |
-| special.rs Bot::touched_pushable_waypoint. | `special.inc` `special_touched_pushable_waypoint` | stub |
-| special.rs Bot::next_waypoint_tasks. | `special.inc` `special_next_waypoint_tasks` | stub |
-| special.rs Bot::touched_human_tower. | `special.inc` `special_touched_human_tower` | stub |
-| special.rs find_nearest_button | `special.inc` `special_find_nearest_button` | stub |
-| special.rs find_nearest_entity (by classname list), 0 none. | `special.inc` `special_find_nearest_entity` | stub |
-| special.rs player_near_vector, 0 none. | `special.inc` `special_player_near_vector` | stub |
-| special.rs Bot::task_push_pushable (task slot 0). | `special.inc` `special_task_push_pushable` | stub |
-| special.rs Bot::task_wait_for_lift. | `special.inc` `special_task_wait_for_lift` | stub |
-| special.rs Bot::task_wait_for_entity. | `special.inc` `special_task_wait_for_entity` | stub |
-| special.rs Bot::task_human_tower. | `special.inc` `special_task_human_tower` | stub |
-| special.rs Bot::task_wait_for_bot_at_wpt. | `special.inc` `special_task_wait_for_bot_at_wpt` | stub |
-| special.rs Bot::task_face_edict. | `special.inc` `special_task_face_edict` | stub |
-| special.rs Bot::task_throw_grenade. | `special.inc` `special_task_throw_grenade` | stub |
+| special.rs Bot::touch (DispatchTouch for a living bot) | `special.inc` `special_touch` | ported |
+| special.rs Bot::player_standing_on_me | `special.inc` `special_player_standing_on_me` | ported |
+| special.rs Bot::standing_on_player | `special.inc` `special_standing_on_player` | ported |
+| special.rs Bot::check_lift. | `special.inc` `special_check_lift` | ported |
+| special.rs Bot::touched_pushable_waypoint. | `special.inc` `special_touched_pushable_waypoint` | ported |
+| special.rs Bot::next_waypoint_tasks. | `special.inc` `special_next_waypoint_tasks` | ported |
+| special.rs Bot::touched_human_tower. | `special.inc` `special_touched_human_tower` | ported |
+| special.rs find_nearest_button / master_find_button | `special.inc` `special_find_nearest_button` | ported |
+| special.rs find_nearest_entity (by classname list), 0 none. | `special.inc` `special_find_nearest_entity` | ported |
+| special.rs player_near_vector, 0 none. | `special.inc` `special_player_near_vector` | ported |
+| special.rs is_button, best_pushable_distance, desired_pushable_vector, acceptable_pushable_vector | `special.inc` (static) | ported |
+| special.rs Bot::task_push_pushable (task slot 0). | `special.inc` `special_task_push_pushable` | ported |
+| special.rs Bot::task_wait_for_lift. | `special.inc` `special_task_wait_for_lift` | ported |
+| special.rs Bot::task_wait_for_entity. | `special.inc` `special_task_wait_for_entity` | ported |
+| special.rs Bot::task_human_tower. | `special.inc` `special_task_human_tower` | ported |
+| special.rs Bot::task_wait_for_bot_at_wpt (OtherBot: one of our bots, by user id). | `special.inc` `special_task_wait_for_bot_at_wpt` | ported |
+| special.rs Bot::task_face_edict. | `special.inc` `special_task_face_edict` | ported |
+| special.rs Bot::task_throw_grenade | `special.inc` `special_task_throw_grenade` | partial: look_turn_to has no turn-time argument (Rust turn_to(aim, now, 0.04)) |
 
 ### look.inc
 

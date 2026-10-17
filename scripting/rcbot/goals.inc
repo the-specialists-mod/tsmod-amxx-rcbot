@@ -7,8 +7,8 @@
 // The port scores what it knows of the map: items are worth value / (distance + danger), enemies
 // seen lately and sounds heard by how fresh they are, a spot to hold, a teammate to regroup with.
 //
-// The team boards are board.inc's tables (read here, written by their owner): sightings and
-// sounds by rules team - 1 (TeamBoards::get), claims and posts per bot, on the bot's rules team.
+// The team boards are read through board.inc's readers (board_sighting, board_sound,
+// board_item_claimed, board_mates).
 //
 // Status: ported.
 
@@ -19,10 +19,6 @@
 
 // goals.rs ROAM_SCORE: a goal must score this much to beat roaming.
 #define GOALS_ROAM_SCORE	10.0
-// board.rs POST_FOR: seconds a bot's post of its position counts.
-#define GOALS_POST_FOR		2.0
-// board.rs SOUND_FOR, as goals.rs uses it for a teammate's sound.
-#define GOALS_SOUND_FOR		8.0
 // goals.rs SNIPER (the Barrett).
 #define GOALS_SNIPER		18
 
@@ -143,13 +139,6 @@ static stock Float:goals_claim_near(id, const Float:at[3])
 	return wpt >= 0 ? navigate_claim_factor(id, wpt) : 1.0;
 }
 
-// TeamBoards::get: the bot's board (rules team - 1), -1 outside teamplay.
-static stock goals_board(id)
-{
-	new t = world_team(id) - 1;
-	return t >= 0 && t < BOARD_TEAMS ? t : -1;
-}
-
 // goals.rs Bot::choose_goal: the best thing to do now, by value / (distance + danger) against
 // ROAM_SCORE: GOAL_*, its argument (item, waypoint) and vector, its score, and for a hunt when the
 // enemy was seen.
@@ -168,8 +157,7 @@ stock goals_choose(id, &arg, Float:vec[3], &Float:score, &Float:when = 0.0)
 	{
 		new Float:dist = vec_distance(g_it_origin[id][k], from) * 1.3;
 		new Float:arrive = now + dist / max_speed;
-		// KnownItem::there_at.
-		if (!(g_it_f[id][k][IT_AVAILABLE_AT] <= arrive && g_it_f[id][k][IT_IGNORE_UNTIL] <= now) || g_it_origin[id][k][2] > from[2] + 1000.0)
+		if (!items_there_at(id, k, arrive) || g_it_origin[id][k][2] > from[2] + 1000.0)
 		{
 			continue;
 		}
@@ -220,39 +208,38 @@ stock goals_choose(id, &arg, Float:vec[3], &Float:score, &Float:when = 0.0)
 		}
 	}
 	// What teammates saw and heard, worth less (they may be on it) and only when nobody claimed it.
-	new b = goals_board(id);
-	if (b != -1)
+	new team = world_team(id);
+	new Float:o[3], Float:t, Float:loud, enemy, enemy_serial;
+	new ns = board_sighting_count(team);
+	for (new k = 0; k < ns; k++)
 	{
-		for (new k = 0; k < g_bd_sight_count[b]; k++)
+		if (board_sighting(team, k, o, t, enemy, enemy_serial) == id)
 		{
-			if (g_bd_sight_by[b][k] == id)
-			{
-				continue;
-			}
-			new Float:fresh = 1.0 - (now - g_bd_sight_time[b][k]) / BOARD_SIGHTING_FOR;
-			new Float:s = goals_score(25.0 * fresh * ready * goals_claim_near(id, g_bd_sight_origin[b][k]), vec_distance(g_bd_sight_origin[b][k], from), 0.0);
-			if (s > score)
-			{
-				goal = GOAL_INVESTIGATE;
-				vec_copy(g_bd_sight_origin[b][k], vec);
-				score = s;
-			}
+			continue;
 		}
-		for (new k = 0; k < g_bd_sound_count[b]; k++)
+		new Float:fresh = 1.0 - (now - t) / BOARD_SIGHTING_FOR;
+		new Float:s = goals_score(25.0 * fresh * ready * goals_claim_near(id, o), vec_distance(o, from), 0.0);
+		if (s > score)
 		{
-			if (g_bd_sound_by[b][k] == id)
-			{
-				continue;
-			}
-			new Float:fresh = 1.0 - (now - g_bd_sound_time[b][k]) / GOALS_SOUND_FOR;
-			new Float:s = goals_score(15.0 * g_bd_sound_loud[b][k] * fresh * ready * goals_claim_near(id, g_bd_sound_origin[b][k]),
-				vec_distance(g_bd_sound_origin[b][k], from), 0.0);
-			if (s > score)
-			{
-				goal = GOAL_INVESTIGATE;
-				vec_copy(g_bd_sound_origin[b][k], vec);
-				score = s;
-			}
+			goal = GOAL_INVESTIGATE;
+			vec_copy(o, vec);
+			score = s;
+		}
+	}
+	new nh = board_sound_count(team);
+	for (new k = 0; k < nh; k++)
+	{
+		if (board_sound(team, k, o, t, loud) == id)
+		{
+			continue;
+		}
+		new Float:fresh = 1.0 - (now - t) / BOARD_SOUND_FOR;
+		new Float:s = goals_score(15.0 * loud * fresh * ready * goals_claim_near(id, o), vec_distance(o, from), 0.0);
+		if (s > score)
+		{
+			goal = GOAL_INVESTIGATE;
+			vec_copy(o, vec);
+			score = s;
 		}
 	}
 	if (g_th_f[id][TH_HOLD_AGAIN] <= now)
@@ -419,24 +406,10 @@ stock goals_predict_enemy(id, const Float:origin[3], Float:secs)
 }
 
 // goals.rs Bot::claim_item_factor: how much the bot still wants an item a teammate is going for
-// (1: nobody is). A claim counts until its time (TeamBoard::expire).
+// (1: nobody is).
 stock Float:goals_claim_item_factor(id, item, item_serial)
 {
-	new team = world_team(id);
-	if (goals_board(id) == -1)
-	{
-		return 1.0;
-	}
-	new Float:now = g_now;
-	for (new b = 1; b <= MAX_PLAYERS; b++)
-	{
-		if (b != id && world_team(b) == team && g_bd_claim_until[b] > now
-			&& think_same_handle(g_bd_claim_item[b], g_bd_claim_item_serial[b], item, item_serial) && item != 0)
-		{
-			return 0.1;
-		}
-	}
-	return 1.0;
+	return board_item_claimed(world_team(id), id, item, item_serial) ? 0.1 : 1.0;
 }
 
 // goals.rs Bot::regroup_point: outnumbered (more enemies seen near the bot in the last 5 s, by it
@@ -445,21 +418,23 @@ stock Float:goals_claim_item_factor(id, item, item_serial)
 stock bool:goals_regroup_point(id, Float:out[3])
 {
 	vec_zero(out);
-	new board = goals_board(id);
-	if (board == -1)
+	new team = world_team(id);
+	if (!board_exists(team))
 	{
 		return false;
 	}
 	new Float:now = g_now;
-	new Float:me[3];
+	new Float:me[3], Float:o[3], Float:t;
 	world_origin(id, me);
 	static ents[BOARD_MAX_SIGHTINGS + RC_MAX_REMEMBER], serials[BOARD_MAX_SIGHTINGS + RC_MAX_REMEMBER];
-	new n = 0;
-	for (new k = 0; k < g_bd_sight_count[board]; k++)
+	new n = 0, enemy, enemy_serial;
+	new ns = board_sighting_count(team);
+	for (new k = 0; k < ns; k++)
 	{
-		if (now - g_bd_sight_time[board][k] < 5.0 && vec_distance(g_bd_sight_origin[board][k], me) < 1500.0)
+		board_sighting(team, k, o, t, enemy, enemy_serial);
+		if (now - t < 5.0 && vec_distance(o, me) < 1500.0)
 		{
-			n = goals_add_enemy(ents, serials, n, g_bd_sight_ent[board][k], g_bd_sight_serial[board][k]);
+			n = goals_add_enemy(ents, serials, n, enemy, enemy_serial);
 		}
 	}
 	for (new k = 0; k < g_rm_count[id]; k++)
@@ -469,31 +444,27 @@ stock bool:goals_regroup_point(id, Float:out[3])
 			n = goals_add_enemy(ents, serials, n, g_rm_i[id][k][RM_ENT], g_rm_i[id][k][RM_SERIAL]);
 		}
 	}
-	// TeamBoard::mates: the bots of the team that posted in the last POST_FOR s.
-	new team = world_team(id), near = 0, best = 0, Float:best_d = 0.0;
-	for (new m = 1; m <= MAX_PLAYERS; m++)
+	static Float:mates[RC_SLOTS][3];
+	new nm = board_mates(team, id, mates, RC_SLOTS);
+	new near = 0, best = -1, Float:best_d = 0.0;
+	for (new m = 0; m < nm; m++)
 	{
-		new Float:t = g_bd_post_time[m];
-		if (m == id || t <= 0.0 || t > now || now - t > GOALS_POST_FOR || world_team(m) != team)
-		{
-			continue;
-		}
-		new Float:d = vec_distance(g_bd_post_at[m], me);
+		new Float:d = vec_distance(mates[m], me);
 		if (d < 1000.0)
 		{
 			near++;
 		}
-		if (d >= 300.0 && (!best || d < best_d))
+		if (d >= 300.0 && (best == -1 || d < best_d))
 		{
 			best = m;
 			best_d = d;
 		}
 	}
-	if (n < near + 2 || !best)
+	if (n < near + 2 || best == -1)
 	{
 		return false;
 	}
-	vec_copy(g_bd_post_at[best], out);
+	vec_copy(mates[best], out);
 	return true;
 }
 
