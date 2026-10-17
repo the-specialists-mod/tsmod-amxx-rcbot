@@ -1,8 +1,8 @@
-# Builds the modules (rcbot_megahal, rcbot_learn) for i686 Linux and Windows and publishes a
-# GitHub release when a `v*` tag is pushed: tsmod-amxx-rcbot-<tag>-<platform>.zip, each holding
-# addons/amxmodx/modules/ and scripting/include/ (rcbot_megahal.inc, rcbot_learn.inc) to copy over
-# a server's ts/addons/. A manual run (workflow_dispatch) builds the archives as a workflow
-# artifact without publishing a release.
+# Builds the modules (rcbot_megahal, rcbot_learn, rcbot_nav) and the Pawn plugin (rcbot_amxx) for
+# i686 Linux and Windows and publishes a GitHub release when a `v*` tag is pushed:
+# tsmod-amxx-rcbot-<tag>-<platform>.zip, holding addons/amxmodx/{modules,plugins,scripting}/ and
+# tsmod/rcbot/ (RCBot's data) to copy over a server's ts/. A manual run (workflow_dispatch) builds
+# the archives as a workflow artifact without publishing a release.
 name: release
 
 on:
