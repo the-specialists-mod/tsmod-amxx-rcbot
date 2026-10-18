@@ -8,7 +8,7 @@ standalone `tsmod_rcbot`), and where it differs. Conventions and file ownership:
 
 | tsmod-rcbot-rs | Here |
 |---|---|
-| `crates/host` (plugin API v7: `register_bot_backend`, `start_frame`, callbacks) | `rcbot_amxx.sma` + `backend.inc`, `manager.inc`, `world.inc`, `files.inc` over tsx's `tsbot.inc` (tsmod-amxx-rs v0.3.0) and AMX Mod X's engine/fakemeta |
+| `crates/host` (plugin API v7: `register_bot_backend`, `start_frame`, callbacks) | `rcbot_amxx.sma` + `backend.inc`, `manager.inc`, `world.inc`, `files.inc` over tsx's `tsbot.inc` (tsmod-amxx-rs v0.4.0) and AMX Mod X's engine/fakemeta |
 | `rcbot::bot` (`Bot`, `BotManager`) | `scripting/rcbot/<module>.inc`, one per `bot/*.rs`; `struct Bot` is `state.inc` |
 | `rcbot::config`, `rcbot::weapons` | `config.inc`, `commands.inc`, `menu.inc`, `profile.inc`, `rep.inc`, `users.inc`, `client.inc`; `weapons.inc`, `tsweapons.inc` |
 | `rcbot::chat` | `rcbot_megahal` natives (`chat.inc` is the glue) |

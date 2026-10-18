@@ -28,7 +28,7 @@
 //! headers is ignored), `AMXX_SCRIPTING` (amxxpc's directory, default
 //! `~/dev/hl/ref/extracted/amxmodx-1.10.0-git5487-linux/addons/amxmodx/scripting`; `pawn` and
 //! `test` skip the compile check with a note when it is missing), `TSMOD_AMXX_INCLUDE` (tsmod-amxx-rs's
-//! include directory with tsbot.inc, default `~/dev/hl/tsmod-amxx-rs/include`; CI unpacks its v0.3.0
+//! include directory with tsbot.inc, default `~/dev/hl/tsmod-amxx-rs/include`; CI unpacks its v0.4.0
 //! release there). e2e's own variables are in e2e.rs.
 
 mod compat;
@@ -329,7 +329,7 @@ fn pawn(required: bool) -> Result<bool, String> {
     }
     if !tsmod_amxx_include().join("tsbot.inc").is_file() {
         let msg = format!(
-            "no tsbot.inc in {} (set TSMOD_AMXX_INCLUDE to tsmod-amxx-rs v0.3.0's include directory)",
+            "no tsbot.inc in {} (set TSMOD_AMXX_INCLUDE to tsmod-amxx-rs v0.4.0's include directory)",
             tsmod_amxx_include().display()
         );
         if required {

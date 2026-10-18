@@ -29,7 +29,7 @@ and plugin authors can change the bot's behaviour in Pawn:
 * **The bot logic as a Pawn plugin**, `scripting/rcbot_amxx.sma` + `scripting/rcbot/*.inc`
   (one file per Rust module, all ported; docs/design.md lists each function): think, tasks,
   combat, kung fu, squads, chat decisions; it registers with the port as bot backend
-  `rcbot_amxx` (`ts_bot_backend rcbot_amxx`) through tsx's `tsbot.inc` (tsmod-amxx-rs v0.3.0).
+  `rcbot_amxx` (`ts_bot_backend rcbot_amxx`) through tsx's `tsbot.inc` (tsmod-amxx-rs v0.4.0).
   It calls the modules' natives where the Rust bot calls `rcbot::chat` / `rcbot::learn` /
   `rcbot::nav` (see `crates/learn/src/natives.rs` for the mapping from `bot/learning.rs`,
   `think.rs`, `combat.rs`, `manager.rs`). **Read [docs/pawn.md](docs/pawn.md) before touching
@@ -124,7 +124,7 @@ cargo xtask pawn                 # amxxpc on scripting/**/*.sma (include/ first;
 own directory on `LD_LIBRARY_PATH` (xtask sets it).
 
 `TSMOD_AMXX_INCLUDE` names tsmod-amxx-rs's include directory (tsbot.inc; default
-`~/dev/hl/tsmod-amxx-rs/include`; CI unpacks the v0.3.0 release's), searched after `include/` and
+`~/dev/hl/tsmod-amxx-rs/include`; CI unpacks the v0.4.0 release's), searched after `include/` and
 before AMX Mod X's.
 
 `cargo xtask e2e [linux] [win]` (`xtask/src/e2e.rs`) runs rcbot_amxx on the amxx-testenv roots
@@ -177,7 +177,7 @@ Before calling a change done: `cargo fmt`, `cargo xtask test`, `cargo xtask lint
 ## Pinned dependencies
 
 `amxx` (tsmod-amxx-rs) and `rcbot` (tsmod-rcbot-rs) are git dependencies pinned by tag in the root
-`Cargo.toml`'s `[workspace.dependencies]`, the only place they are named. `amxx` v0.3.0 pins the
+`Cargo.toml`'s `[workspace.dependencies]`, the only place they are named. `amxx` v0.4.0 pins the
 port's v3.0.8 (plugin API 7); `rcbot` (v0.3.0) has no port dependency. When bumping, check
 `Cargo.lock` has one `goldsrc-sys` and one `ts-plugin-api`.
 

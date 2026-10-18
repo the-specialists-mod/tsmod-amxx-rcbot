@@ -19,8 +19,8 @@ dependencies = [
 
 [[package]]
 name = "amxx"
-version = "0.3.0"
-source = "git+https://github.com/the-specialists-mod/tsmod-amxx-rs?rev=c36429538fdf95ef0b1c72a8a80f553b924f68ca#c36429538fdf95ef0b1c72a8a80f553b924f68ca"
+version = "0.4.0"
+source = "git+https://github.com/the-specialists-mod/tsmod-amxx-rs?tag=v0.4.0#6046fafa86f21dd7d3c14800798db9f9bf70e8e6"
 dependencies = [
  "goldsrc-sys",
  "libc",
@@ -183,7 +183,7 @@ dependencies = [
 
 [[package]]
 name = "rcbot-amxx-common"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "amxx",
  "rcbot",
@@ -191,7 +191,7 @@ dependencies = [
 
 [[package]]
 name = "rcbot_learn"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "amxx",
  "rcbot",
@@ -200,7 +200,7 @@ dependencies = [
 
 [[package]]
 name = "rcbot_megahal"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "amxx",
  "rcbot",
@@ -209,7 +209,7 @@ dependencies = [
 
 [[package]]
 name = "rcbot_nav"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "amxx",
  "rcbot",
@@ -287,4 +287,4 @@ checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.2.0"
