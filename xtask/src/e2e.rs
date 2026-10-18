@@ -27,7 +27,7 @@
 //!    modules).
 //!
 //! Environment: `AMXX_TESTENV` (default `~/dev/hl/ref/amxx-testenv`), `AMXX_LINUX_ROOT` /
-//! `AMXX_WIN_ROOT` (default `~/games/amxx_rehlds_{linux,win}`), `TSMOD_AMXX_DIR` (default
+//! `AMXX_WIN_ROOT` / `AMXX_LINUX64_ROOT` (default `~/games/amxx_rehlds_{linux,win,linux64}`), `TSMOD_AMXX_DIR` (default
 //! `~/dev/hl/tsmod-amxx-rs`), `E2E_TIMEOUT` (seconds to wait for DONE, default 300).
 //!
 //! The roots are shared: this never starts a server outside its run and always stops it.
@@ -76,7 +76,14 @@ pub(super) fn roots(names: &[String]) -> Result<Vec<Root>, String> {
                 target: &TARGETS[1],
                 exe: "hlds.exe",
             }),
-            other => Err(format!("unknown e2e root {other} (linux|win)")),
+            "linux64" => Ok(Root {
+                os: "linux64",
+                dir: env_path("AMXX_LINUX64_ROOT", home().join("games/amxx_rehlds_linux64")),
+                port: 27317,
+                target: &TARGETS[2],
+                exe: "hlds_linux",
+            }),
+            other => Err(format!("unknown e2e root {other} (linux|win|linux64)")),
         })
         .collect()
 }

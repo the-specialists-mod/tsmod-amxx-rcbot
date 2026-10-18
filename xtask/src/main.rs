@@ -1,11 +1,12 @@
 //! Build, package and test tooling: `cargo xtask <command>`.
 //!
 //! ```text
-//! build [--release]          the modules (rcbot_megahal, rcbot_learn, rcbot_nav) for i686 Linux and Windows
+//! build [--release]          the modules (rcbot_megahal, rcbot_learn, rcbot_nav) for i686 and x86_64, Linux and
+//!                            Windows (x86_64: goldsrc-net's AMX Mod X fork)
 //! dist [--debug-info]        release build -> dist/<platform>/addons/amxmodx/{modules,scripting/include}/ (stripped
 //!                            unless --debug-info), with AMX Mod X's file names
-//! lint                       cargo fmt --check, clippy -D warnings on both targets
-//! test                       unit tests on the host and on i686 Linux, then the Pawn compile check (pawn)
+//! lint                       cargo fmt --check, clippy -D warnings on every target
+//! test                       unit tests on x86_64 and i686 Linux, then the Pawn compile check (pawn)
 //! pawn                       compiles scripting/**/*.sma with amxxpc against include/, tsmod-amxx-rs's include/
 //!                            (tsbot.inc, tsconst.inc, tsfun.inc) and AMX Mod X's (into target/pawn/)
 //! e2e [linux] [win]          dist, the Pawn plugins, tsx/tsfun from tsmod-amxx-rs, then rcbot_amxx on the
@@ -18,6 +19,9 @@
 //!                            tick rate: process CPU, frames, fps, alive bots, ts_frame; CSV + markdown in
 //!                            target/perf-compare/; perf_compare.rs
 //! ```
+//!
+//! e2e, compat, perf and perf-compare also take `linux64`: the 64-bit root
+//! (`~/games/amxx_rehlds_linux64`, goldsrc-net's AMX Mod X fork) with the x86_64 modules.
 //!
 //! Environment: `FWGS_DIR` (FWGS headers, default: `xash3d-fwgs` next to the checkout or one of its
 //! ancestors, so git worktrees under `.claude/worktrees/` find it too; an `FWGS_DIR` without the
@@ -53,7 +57,9 @@ struct Target {
     amxx_file: fn(&str) -> String,
 }
 
-const TARGETS: [Target; 2] = [
+/// The 64-bit ones are for goldsrc-net's AMX Mod X fork (its Linux modules end in `_amd64.so`;
+/// on Windows the names stay the 32-bit build's).
+const TARGETS: [Target; 4] = [
     Target {
         triple: "i686-unknown-linux-gnu",
         platform: "linux-i686",
@@ -65,6 +71,20 @@ const TARGETS: [Target; 2] = [
         triple: "i686-pc-windows-gnu",
         platform: "windows-i686",
         strip: "i686-w64-mingw32-strip",
+        cargo_file: |m| format!("{m}.dll"),
+        amxx_file: |m| format!("{m}_amxx.dll"),
+    },
+    Target {
+        triple: "x86_64-unknown-linux-gnu",
+        platform: "linux-x86_64",
+        strip: "strip",
+        cargo_file: |m| format!("lib{m}.so"),
+        amxx_file: |m| format!("{m}_amxx_amd64.so"),
+    },
+    Target {
+        triple: "x86_64-pc-windows-gnu",
+        platform: "windows-x86_64",
+        strip: "x86_64-w64-mingw32-strip",
         cargo_file: |m| format!("{m}.dll"),
         amxx_file: |m| format!("{m}_amxx.dll"),
     },
@@ -133,7 +153,7 @@ fn built(t: &Target, release: bool, file: &str) -> PathBuf {
 /// The library's dynamic exports (`nm -D` on Linux, the export table on Windows), lower case.
 fn exports(t: &Target, lib: &Path) -> Result<String, String> {
     let out = if t.platform.starts_with("windows") {
-        Command::new("i686-w64-mingw32-objdump").arg("-p").arg(lib).output()
+        Command::new(t.strip.replace("strip", "objdump")).arg("-p").arg(lib).output()
     } else {
         Command::new("nm").args(["-D", "--defined-only"]).arg(lib).output()
     }
@@ -329,7 +349,7 @@ fn pawn(required: bool) -> Result<bool, String> {
 }
 
 fn test() -> Result<(), String> {
-    run(cargo().args(["test", "--workspace"]))?;
+    run(cargo().args(["test", "--workspace", "--target", "x86_64-unknown-linux-gnu"]))?;
     run(cargo().args(["test", "--workspace", "--target", "i686-unknown-linux-gnu"]))?;
     pawn(false).map(|_| ())
 }

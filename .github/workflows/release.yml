@@ -1,5 +1,5 @@
 # Builds the modules (rcbot_megahal, rcbot_learn, rcbot_nav) and the Pawn plugin (rcbot_amxx) for
-# i686 Linux and Windows and publishes a GitHub release when a `v*` tag is pushed:
+# i686 and x86_64 (goldsrc-net's 64-bit AMX Mod X fork), Linux and Windows, and publishes a GitHub release when a `v*` tag is pushed:
 # tsmod-amxx-rcbot-<tag>-<platform>.zip, holding addons/amxmodx/{modules,plugins,scripting}/ and
 # tsmod/rcbot/ (RCBot's data) to copy over a server's ts/. A manual run (workflow_dispatch) builds
 # the archives as a workflow artifact without publishing a release.
@@ -38,7 +38,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-multilib mingw-w64 libclang-dev zip libc6:i386
           rustup toolchain install stable --profile minimal --component rustfmt,clippy \
-            --target i686-unknown-linux-gnu,i686-pc-windows-gnu
+            --target i686-unknown-linux-gnu,i686-pc-windows-gnu,x86_64-pc-windows-gnu
           rustup default stable
 
       # AMX Mod X 1.10's Linux base package, for amxxpc (a 32-bit binary): the build the

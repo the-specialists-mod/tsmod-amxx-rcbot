@@ -671,7 +671,8 @@ pub(super) fn report(rows: &[Row]) -> String {
     md += "Values are the median over the repetitions with [min–max]. CPU % is the server process' utime+stime per wall second \
            (100 = one core); µs/frame is that CPU time divided by the frames the server ran (perf_alive's server_frame count); \
            fps is frames per wall second; `stats` fps is the engine's own figure. Deaths/min shows the bots fight.\n\n";
-    let oses: Vec<String> = ["linux", "win"].iter().filter(|o| rows.iter().any(|r| r.os == **o)).map(|o| o.to_string()).collect();
+    let oses: Vec<String> =
+        ["linux", "linux64", "win"].iter().filter(|o| rows.iter().any(|r| r.os == **o)).map(|o| o.to_string()).collect();
     let order = |b: &str| BACKENDS.iter().position(|x| *x == b).unwrap_or(9);
     for os in &oses {
         let mut maps: Vec<String> = rows.iter().filter(|r| &r.os == os).map(|r| r.map.clone()).collect();
@@ -812,7 +813,7 @@ pub(super) fn report(rows: &[Row]) -> String {
 
 fn write_report(out_dir: &Path) -> Result<String, String> {
     let mut rows = Vec::new();
-    for os in ["linux", "win"] {
+    for os in ["linux", "linux64", "win"] {
         for l in e2e::read(&out_dir.join(format!("{os}.csv"))).lines().skip(1) {
             rows.extend(Row::parse(l));
         }

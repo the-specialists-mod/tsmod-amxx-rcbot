@@ -123,7 +123,12 @@ impl Drop for Library {
 /// tsmod_rcbot as its dist has it, building it when it is missing.
 pub(super) fn standalone(r: &Root) -> Result<PathBuf, String> {
     let dir = env_path("TSMOD_RCBOT_DIR", home().join("dev/hl/tsmod-rcbot-rs"));
-    let file = if r.os == "win" { "tsmod_rcbot.dll" } else { "tsmod_rcbot_i386.so" };
+    let file = match r.target.platform {
+        "linux-x86_64" => "tsmod_rcbot_amd64.so",
+        "windows-x86_64" => "tsmod_rcbot_amd64.dll",
+        "windows-i686" => "tsmod_rcbot.dll",
+        _ => "tsmod_rcbot_i386.so",
+    };
     let lib = dir.join("dist").join(r.target.platform).join("dlls").join(file);
     if !lib.is_file() {
         run(Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into())).args(["xtask", "dist"]).current_dir(&dir))?;

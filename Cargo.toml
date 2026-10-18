@@ -8,15 +8,15 @@ version = "0.1.0"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/the-specialists-mod/tsmod-amxx-rcbot"
 
-# The two upstream pins, in one place. `amxx` v0.3.0 pins the port to its v3.0.8 release (plugin
-# API version 7) and has the engine wrappers rcbot_nav needs (traces, point contents, the PVS,
-# entity searches); `rcbot` has no port dependency, so it stays on v0.2.0 (its `nav` and `learn`
+# The two upstream pins, in one place. `amxx` at c364295 (v0.3.0 plus its 64-bit support, not
+# tagged yet) pins the port to its v3.0.8 release (plugin API version 7) and has the engine
+# wrappers rcbot_nav needs (traces, point contents, the PVS, entity searches); `rcbot` has no port dependency, so it stays on v0.2.0 (its `nav` and `learn`
 # are unchanged since). Check Cargo.lock keeps one copy of the port crates (goldsrc-sys,
 # ts-plugin-api) when bumping either.
 [workspace.dependencies]
 # The AMX Mod X module SDK (export_module!, natives!, Args, FakeArgs, core functions). Its
 # goldsrc-sys generates bindings from the FWGS headers (`FWGS_DIR`, see .cargo/config.toml).
-amxx = { git = "https://github.com/the-specialists-mod/tsmod-amxx-rs", tag = "v0.3.0" }
+amxx = { git = "https://github.com/the-specialists-mod/tsmod-amxx-rs", rev = "c36429538fdf95ef0b1c72a8a80f553b924f68ca" }
 # RCBot's pure-Rust bot library: MegaHAL, bot_chat.ini, the learners and their file formats.
 rcbot = { git = "https://github.com/the-specialists-mod/tsmod-rcbot-rs", tag = "v0.3.0" }
 rcbot-amxx-common = { path = "crates/common" }

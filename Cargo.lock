@@ -20,7 +20,7 @@ dependencies = [
 [[package]]
 name = "amxx"
 version = "0.3.0"
-source = "git+https://github.com/the-specialists-mod/tsmod-amxx-rs?tag=v0.3.0#8fe39403c528b214fce242bf9113196d065efba6"
+source = "git+https://github.com/the-specialists-mod/tsmod-amxx-rs?rev=c36429538fdf95ef0b1c72a8a80f553b924f68ca#c36429538fdf95ef0b1c72a8a80f553b924f68ca"
 dependencies = [
  "goldsrc-sys",
  "libc",

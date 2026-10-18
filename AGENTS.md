@@ -101,18 +101,19 @@ xtask/           cargo xtask build | dist | lint | test | pawn | e2e (src/e2e.rs
 
 ## Build and test
 
-Requirements: Rust stable with `i686-unknown-linux-gnu` and `i686-pc-windows-gnu`, clang ≥ 18,
+Requirements: Rust stable with `i686-unknown-linux-gnu`, `i686-pc-windows-gnu` and
+`x86_64-pc-windows-gnu` (the x86_64 builds are for goldsrc-net's 64-bit AMX Mod X fork), clang ≥ 18,
 32-bit glibc/libgcc, MinGW-w64, and `../xash3d-fwgs` (with `3rdparty/library_suffix`) or
 `FWGS_DIR`: `amxx` pulls in the port's `goldsrc-sys`, which generates bindings from the FWGS
 headers. `.cargo/config.toml` sets `FWGS_DIR` to `../xash3d-fwgs` unless the environment has it;
 xtask looks for `xash3d-fwgs` next to the checkout or any ancestor (worktrees work).
 
 ```sh
-cargo xtask test                 # unit tests, host and i686, then `pawn` if amxxpc is there
-cargo xtask build [--release]    # both targets; must build without warnings
-cargo xtask lint                 # cargo fmt --check, clippy --all-targets -D warnings, both targets
+cargo xtask test                 # unit tests, x86_64 and i686, then `pawn` if amxxpc is there
+cargo xtask build [--release]    # all four targets; must build without warnings
+cargo xtask lint                 # cargo fmt --check, clippy --all-targets -D warnings, every target
 cargo xtask dist [--debug-info]  # dist/<platform>/addons/amxmodx/{modules,scripting/include}/ with
-                                 # AMX Mod X's names (rcbot_megahal_amxx_i386.so, rcbot_nav_amxx.dll, ...);
+                                 # AMX Mod X's names (rcbot_megahal_amxx_i386.so, _amd64.so, rcbot_nav_amxx.dll, ...);
                                  # checks the AMXX_* exports, the metamod exports (rcbot_nav only, with an
                                  # undecorated GiveFnptrsToDll), no MinGW runtime imports
 cargo xtask pawn                 # amxxpc on scripting/**/*.sma (include/ first; warnings fail)
@@ -135,7 +136,10 @@ weapon switch, turning, a kill, chat and a MegaHAL reply, ...), the `rcbot` comm
 `changelevel ts_lobby` and the phase 2 checks (bots back, kung fu), the data files saved during
 the run, and the error logs; it restores the configs and files it changed. The `~/games` roots
 are shared: never start servers there outside an e2e run (and run e2e only when nothing else uses
-them), and stop them with the testenv's `stop.sh`.
+them), and stop them with the testenv's `stop.sh`. `linux64` (in e2e, compat, perf and
+perf-compare) is the 64-bit root `~/games/amxx_rehlds_linux64` (`setup.sh linux64`: goldsrc-net's
+ReHLDS, Metamod-R and AMX Mod X fork) with the x86_64 modules and tsx/tsfun from tsmod-amxx-rs's
+`dist/linux-x86_64`.
 
 `cargo xtask compat [linux] [win]` (`xtask/src/compat.rs`) shows the data files are shared with
 the standalone tsmod_rcbot on one root: rcbot_amxx plays and writes every learned file, then
