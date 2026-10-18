@@ -42,14 +42,28 @@ stock movement_run_player_move(id)
 	{
 		bot_primary_attack(id);
 	}
-	g_co_i[id][CO_CMD_BUTTONS] = fire_buttons(id, g_co_i[id][CO_BUTTON]);
 	new Float:forward_speed, Float:side_speed;
 	fire_capped_speeds(id, forward_speed, side_speed);
+	g_co_i[id][CO_CMD_BUTTONS] = fire_buttons(id, g_co_i[id][CO_BUTTON])
+		| movement_prone_strafe_keys((world_flags(id) & TSPF_PRONE) != 0, side_speed);
 	vec_copy(g_co_v[id][CO_VANGLE], g_co_v[id][CO_CMD_ANGLES]);
 	g_co_f[id][CO_CMD_FWD] = forward_speed;
 	g_co_f[id][CO_CMD_SIDE] = side_speed;
 	g_co_f[id][CO_CMD_UP] = g_mv_f[id][MV_UP_SPEED];
 	g_co_i[id][CO_CMD_IMPULSE] = 0;
+}
+
+// movement.rs prone_strafe_keys (design §4): the strafe key a player would hold for side_speed
+// while prone. TS rolls a prone player sideways on IN_MOVELEFT / IN_MOVERIGHT (HandleSlide),
+// lying facing the aim afterwards; the speed alone only slides the body, still facing the dive.
+// Standing, the keys stay off (ladders read them).
+stock movement_prone_strafe_keys(bool:prone, Float:side_speed)
+{
+	if (!prone || side_speed == 0.0)
+	{
+		return 0;
+	}
+	return side_speed < 0.0 ? IN_MOVELEFT : IN_MOVERIGHT;
 }
 
 // mod.rs Bot::jump / duck / use_button / alt_button.

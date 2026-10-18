@@ -348,6 +348,7 @@ to the front drops the last task instead (the Rust queue is unbounded).
 | movement.rs Bot::stunt_ready (TSPS_STANCE, TSPF_STUNTING, TSCOMBAT_NEXT_STUNT) | `movement.inc` `movement_stunt_ready` | ported |
 | movement.rs Bot::dive (TS's +alt1 stunt on its own) | `movement.inc` `movement_dive` | ported |
 | movement.rs Bot::dive_landing (TSPF_PRONE, TSCOMBAT_PRONE_LOCK) | `movement.inc` `movement_dive_landing` | ported |
+| movement.rs prone_strafe_keys (TSPF_PRONE: the strafe key for the side speed, so TS rolls the bot) | `movement.inc` `movement_prone_strafe_keys` | ported |
 | mod.rs Bot::climb_type (GetClimbType, TS's cases). | `movement.inc` `movement_climb_type` | ported |
 | mod.rs Bot::ladder_dir (1 up, -1 down, 0 stay) | `movement.inc` `movement_ladder_dir` | ported |
 
