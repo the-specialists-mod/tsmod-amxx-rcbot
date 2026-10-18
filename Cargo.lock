@@ -175,15 +175,15 @@ dependencies = [
 
 [[package]]
 name = "rcbot"
-version = "0.3.0"
-source = "git+https://github.com/the-specialists-mod/tsmod-rcbot-rs?tag=v0.3.0#0151cfd55d89c272ccd3cf5380229c2f179158c0"
+version = "0.3.1"
+source = "git+https://github.com/the-specialists-mod/tsmod-rcbot-rs?tag=v0.3.1#584ec7393cbc5a0c8693994a7d5cdc2212ad702f"
 dependencies = [
  "miniz_oxide",
 ]
 
 [[package]]
 name = "rcbot-amxx-common"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "amxx",
  "rcbot",
@@ -191,7 +191,7 @@ dependencies = [
 
 [[package]]
 name = "rcbot_learn"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "amxx",
  "rcbot",
@@ -200,7 +200,7 @@ dependencies = [
 
 [[package]]
 name = "rcbot_megahal"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "amxx",
  "rcbot",
@@ -209,7 +209,7 @@ dependencies = [
 
 [[package]]
 name = "rcbot_nav"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "amxx",
  "rcbot",
@@ -287,4 +287,4 @@ checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
 
 [[package]]
 name = "xtask"
-version = "0.2.0"
+version = "0.2.1"

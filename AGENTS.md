@@ -178,7 +178,7 @@ Before calling a change done: `cargo fmt`, `cargo xtask test`, `cargo xtask lint
 
 `amxx` (tsmod-amxx-rs) and `rcbot` (tsmod-rcbot-rs) are git dependencies pinned by tag in the root
 `Cargo.toml`'s `[workspace.dependencies]`, the only place they are named. `amxx` v0.4.0 pins the
-port's v3.0.8 (plugin API 7); `rcbot` (v0.3.0) has no port dependency. When bumping, check
+port's v3.0.8 (plugin API 7); `rcbot` (v0.3.1) has no port dependency. When bumping, check
 `Cargo.lock` has one `goldsrc-sys` and one `ts-plugin-api`.
 
 ## Git
